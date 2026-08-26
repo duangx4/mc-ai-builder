@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MC AI Builder v2 — 重构升级路线图</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #161b22;
+    --panel2: #1c232d;
+    --border: #2a3541;
+    --text: #d7e2ec;
+    --dim: #8b98a5;
+    --mc-green: #3fb950;
+    --mc-green-dim: #2ea04355;
+    --gold: #d29922;
+    --blue: #58a6ff;
+    --purple: #bc8cff;
+    --red: #f85149;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Segoe UI", sans-serif;
+    line-height: 1.65;
+    padding-bottom: 80px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* header */
+  header {
+    background: linear-gradient(180deg, #141a22 0%, #0e1116 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 42px 0 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::after {
+    content: "⛏";
+    position: absolute; right: 40px; top: 28px;
+    font-size: 72px; opacity: .08; transform: rotate(-12deg);
+  }
+  .kicker { color: var(--mc-green); font-weight: 600; letter-spacing: .12em; font-size: 13px; text-transform: uppercase; }
+  h1 { font-size: 30px; margin: 8px 0 6px; letter-spacing: .02em; }
+  .sub { color: var(--dim); font-size: 15px; max-width: 780px; }
+  .pill-row { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    font-size: 12px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--dim); background: var(--panel);
+  }
+  .pill.g { border-color: #2ea04355; color: #7ee787; }
+  .pill.b { border-color: #388bfd55; color: #79c0ff; }
+
+  /* nav */
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: #0e1116ee; backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+  }
+  nav .wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+  nav a {
+    color: var(--dim); text-decoration: none; font-size: 13px;
+    padding: 4px 10px; border-radius: 6px; transition: .15s;
+  }
+  nav a:hover { color: var(--text); background: var(--panel2); }
+
+  /* sections */
+  section { margin-top: 40px; }
+  .sec-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 20px; font-weight: 700; margin-bottom: 16px;
+  }
+  .sec-title .n {
+    width: 30px; height: 30px; flex: none; border-radius: 8px;
+    background: var(--mc-green-dim); color: #7ee787;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-family: var(--mono);
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .card h3 { font-size: 15px; margin-bottom: 8px; color: #fff; }
+  .card h3 .tag { font-size: 11px; color: var(--dim); font-weight: 400; margin-left: 6px; }
+  .card ul { list-style: none; }
+  .card li { font-size: 13.5px; color: var(--text); padding: 4px 0 4px 16px; position: relative; }
+  .card li::before { content: "▸"; position: absolute; left: 0; color: var(--mc-green); }
+  .card li.dim { color: var(--dim); }
+  .card li.dim::before { color: var(--dim); }
+  .note { font-size: 12.5px; color: var(--dim); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+  /* roadmap */
+  .phase { border-left: 3px solid var(--mc-green); background: var(--panel); border-radius: 0 12px 12px 0; padding: 14px 18px; margin-bottom: 14px; }
+  .phase.p2 { border-color: var(--blue); }
+  .phase.p3 { border-color: var(--gold); }
+  .phase .ph { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .phase .ph b { font-size: 15px; color: #fff; }
+  .phase .ph span { font-size: 12px; color: var(--dim); }
+  .phase ul { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2px 18px; }
+  .phase li { font-size: 13.5px; padding: 3px 0 3px 16px; position: relative; }
+  .phase li::before { content: "☐"; position: absolute; left: 0; color: var(--dim); }
+  .phase li.done::before { content: "☑"; color: var(--mc-green); }
+  .phase li.done { color: #7ee78788; }
+
+  /* decision table */
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--panel); border-radius: 12px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel2); color: var(--dim); font-weight: 600; font-size: 12.5px; letter-spacing: .05em; }
+  tr:last-child td { border-bottom: none; }
+  .rec { color: var(--gold); font-weight: 600; }
+
+  /* quote */
+  .quote {
+    border-left: 3px solid var(--purple); background: var(--panel);
+    padding: 14px 18px; border-radius: 0 12px 12px 0; font-size: 15px;
+  }
+  .quote b { color: #e0c7ff; }
+
+  footer { margin-top: 60px; border-top: 1px solid var(--border); padding-top: 20px; color: var(--dim); font-size: 12.5px; }
+  code { font-family: var(--mono); font-size: 12px; background: var(--panel2); padding: 1px 6px; border-radius: 5px; color: #79c0ff; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">MC AI Builder · v2</div>
+    <h1>重构升级路线图</h1>
+    <p class="sub">合并依据：官方源码 · 本地 10 提交实战成果 · 改版者日志（40+ 轮迭代）· 技术路线讨论（SDF 体素化 / 结构库 RAG / 素材采集）</p>
+    <div class="pill-row">
+      <span class="pill g">✅ 基线可跑</span>
+      <span class="pill">阶段状态机</span>
+      <span class="pill">多 Agent 流水线</span>
+      <span class="pill b">原版级渲染</span>
+      <span class="pill">全模式流式</span>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <a href="#s0">定位</a>
+    <a href="#s1">现状盘点</a>
+    <a href="#s2">五大精华</a>
+    <a href="#s3">我们的增量</a>
+    <a href="#s4">技术定性</a>
+    <a href="#s5">路线图</a>
+    <a href="#s6">决策点</a>
+    <a href="#s7">铁律</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <section id="s0">
+    <div class="quote">
+      <b>LLM 当大脑，SDF 当手，结构库当记忆。</b><br>
+      智商（生成质量）靠多 Agent 流水线与材质直通；眼睛（渲染）靠原版级引擎；肌肉（几何）靠 SDF 体素化；记忆（先验）靠结构库检索。
+    </div>
+  </section>
+
+  <section id="s1">
+    <div class="sec-title"><span class="n">1</span>现状盘点</div>
+    <div class="grid">
+      <div class="card"><h3>🟢 官方源码 <span class="tag">v2 基线 · 5 commits</span></h3>
+        <ul><li>✅ 可跑：3001 后端 + 5173 前端冒烟通过</li><li>✅ 6 技能完整（knowledge→planning→construction→inspection→decoration→quality）</li></ul>
+      </div>
+      <div class="card"><h3>📦 builder 10 提交 <span class="tag">未迁入</span></h3>
+        <ul><li>大门形制（gates.md 三层覆盖）</li><li>中式古典风格（梁思成）</li><li>提示词优化器 / 去重兜底</li><li>生图预览工作流</li></ul>
+      </div>
+      <div class="card"><h3>📄 改版者日志 <span class="tag">信息资产 · 待利用</span></h3>
+        <ul><li>同一官方仓库的重制记录</li><li>一份写好的实施手册</li><li>架构 / 渲染 / 流式全套方案</li></ul>
+      </div>
+      <div class="card"><h3>🚀 SDF / RAG / 素材采集 <span class="tag">未开工</span></h3>
+        <ul><li>SDF 体素化：任意曲面几何</li><li>结构库检索：建筑常识先验</li><li>素材三管道：全部验证可达</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="s2">
+    <div class="sec-title"><span class="n">2</span>改版者五大精华（照搬 + 适配）</div>
+
+    <div class="grid">
+      <div class="card"><h3>⚙️ 架构：智能构建引擎 + 多 Agent</h3>
+        <ul>
+          <li>三模式合并：阶段流护栏 + 全工具自主决策</li>
+          <li>编排器（风格规划→区块分配）→ 并行构建 Agent</li>
+          <li>递归细分（深度 2，每节点 2~6 子区块）</li>
+          <li><b>只重建受影响区块</b>，根治全量重生成</li>
+          <li>区块衔接规划：水平面 / 高度线 / 衔接表 / 校验</li>
+          <li>材质直通：1300+ 材质库 + 一致性铁律，删随机</li>
+        </ul>
+        <div class="note">阶段状态机替代字符串解析</div>
+      </div>
+
+      <div class="card"><h3>👁 渲染：原版级引擎</h3>
+        <ul>
+          <li>原版图集 + 合批渲染 + 顶点色 tint</li>
+          <li>6 版本 4797 张贴图动态切换</li>
+          <li>形状合法化：楼梯/门/栅栏邻居推断连接</li>
+          <li>半透明三分类 + 树叶/水内部面剔除</li>
+          <li>阴影全套：相机 500 / 实时 / 黄金角柔化 / 光源面板</li>
+          <li>发光彩色化 + 局部掩膜 + 辉光开关；水菲涅尔</li>
+        </ul>
+        <div class="note">排查范本：阴影三连坑 / 发光崩溃 / 石英分面 404</div>
+      </div>
+
+      <div class="card"><h3>📡 AI 工作流体验</h3>
+        <ul>
+          <li>全模式流式：思考/工具/输出逐 token 上屏</li>
+          <li>渐进式渲染：按 <code>// N.</code> 分段边出边渲染</li>
+          <li>取消 15 轮上限（护栏：熔断/重试/中断）</li>
+          <li>状态徽章：思考中/调用中/构建中/验证中</li>
+          <li>相机清单级单次适配</li>
+        </ul>
+      </div>
+
+      <div class="card"><h3>🛠 工程化</h3>
+        <ul>
+          <li>类型检查 + 测试底座</li>
+          <li>统一设置 Schema + 旧配置迁移</li>
+          <li>AI 服务层：四档思考强度 / 退避重试</li>
+          <li>修复流式跨包丢数据（代码缺字符根因）</li>
+          <li>进程健康检测（10s 巡检 + 徽章分级）</li>
+          <li>UI 黑白极简：三栏可调 / 按需加载</li>
+        </ul>
+      </div>
+
+      <div class="card"><h3>🧭 新功能</h3>
+        <ul>
+          <li>投影查看器：.litematic/.schem 逐层教学</li>
+          <li>爆炸视图 / 聚焦 / 材料统计</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <div class="sec-title"><span class="n">3</span>我们的增量（改版者没做的）</div>
+
+    <div class="grid">
+      <div class="card"><h3>🧊 几何自由度：SDF 体素化</h3>
+        <ul>
+          <li><code>voxelizeSDF(fn, aabb, step)</code> 纯算法，无需模型</li>
+          <li>椭圆穹顶 / 旋转体塔楼 / 曲面屋顶</li>
+          <li>曲面模板库兜底（拱券/穹顶/尖拱）</li>
+          <li>进阶：OBJ/GLB 导入体素化（低模优先）</li>
+        </ul>
+      </div>
+      <div class="card"><h3>🧠 结构库检索增强 RAG</h3>
+        <ul>
+          <li>素材：980 官方结构 + 采集的 .schem</li>
+          <li>自主模式工具 <code>search_structure(query)</code></li>
+          <li>返回相似结构的尺寸/布局/材料分布</li>
+          <li>"数据先验"廉价版：可溯源、可解释</li>
+        </ul>
+      </div>
+      <div class="card"><h3>🌐 素材采集三管道</h3>
+        <ul>
+          <li>MC 结构：PMC / GitHub 数据集 → NBT 解析 → 案例库</li>
+          <li>3D 模型：Poly Haven / Sketchfab / Quaternius（CC0）</li>
+          <li>建筑图：视觉参考模式整理成库</li>
+        </ul>
+        <div class="note">全部源已探测可达（200）</div>
+      </div>
+      <div class="card"><h3>🔧 工程补强</h3>
+        <ul>
+          <li>模型配置本地持久化（现 localStorage）</li>
+          <li>结构合理性检查前端化</li>
+          <li>打包链补全：electron-builder / CI</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4">
+    <div class="sec-title"><span class="n">4</span>技术路线定性</div>
+    <div class="grid">
+      <div class="card"><h3>✅ 路线</h3>
+        <ul>
+          <li>LLM 生成 VoxelBuilder 代码 → 沙箱执行 → 体素</li>
+          <li>比直接吐 JSON 省 token、结构正确靠代码逻辑</li>
+          <li>可复用可迭代、确定性可回放</li>
+        </ul>
+      </div>
+      <div class="card"><h3>⛔ 不做</h3>
+        <ul>
+          <li>自训体素扩散（数据/算力/调参三座山）</li>
+          <li>Mesh/SDF 神经生成（非本项目轨道）</li>
+        </ul>
+      </div>
+      <div class="card"><h3>🔀 内化算法优点</h3>
+        <ul>
+          <li>Mesh/SDF 路线的几何自由度 → SDF 工具层</li>
+          <li>扩散路线的数据先验 → 结构库检索层</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="s5">
+    <div class="sec-title"><span class="n">5</span>合并路线图</div>
+
+    <div class="phase">
+      <div class="ph"><b>P0 · 打底</b><span>能跑、能回滚</span></div>
+      <ul>
+        <li class="done">官方基线入库（已 5 commits）</li>
+        <li>迁入 builder 10 提交（对比 9b25e99 逐条筛选）</li>
+        <li>工程化：scripts / lint / test / 设置 Schema</li>
+        <li>AI 服务层：思考强度 / 退避 / 流式跨包修复</li>
+      </ul>
+    </div>
+
+    <div class="phase">
+      <div class="ph"><b>P1 · 生成质量</b><span>改版者核心价值</span></div>
+      <ul>
+        <li>合并为"智能构建"引擎（阶段流护栏）</li>
+        <li>多 Agent 分区流水线 + 递归细分</li>
+        <li>区块衔接规划 + 校验</li>
+        <li>材质直通：1300+ 材质库 + 一致性铁律</li>
+      </ul>
+    </div>
+
+    <div class="phase p2">
+      <div class="ph"><b>P2 · 渲染与体验</b><span>眼睛</span></div>
+      <ul>
+        <li>原版图集渲染管线（找 C 要资产清单）</li>
+        <li>阴影 / 发光 / 水 / 雾全套</li>
+        <li>全模式流式 + 思考面板 + 渐进式渲染</li>
+        <li>投影查看器</li>
+      </ul>
+    </div>
+
+    <div class="phase p3">
+      <div class="ph"><b>P3 · 差异化</b><span>我们的增量</span></div>
+      <ul>
+        <li>SDF 体素化原语 + 曲面模板库</li>
+        <li>结构库 RAG（search_structure 工具）</li>
+        <li>素材采集管道 1（schematic 下载器 → 案例库）</li>
+        <li>OBJ/GLB 导入体素化 / 模型配置持久化</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="s6">
+    <div class="sec-title"><span class="n">6</span>需要拍板的决策点</div>
+    <table>
+      <tr><th>#</th><th>议题</th><th>改版者做法</th><th>倾向</th></tr>
+      <tr><td>1</td><td>三模式去留</td><td>激进弃快速模式</td><td><span class="rec">默认新引擎，快速模式降级为"快速预览"兜底</span></td></tr>
+      <tr><td>2</td><td>风格知识去留</td><td>删光 18 风格注入</td><td><span class="rec">保留为技能库工具按需读（read_subdoc），不强行注入</span></td></tr>
+      <tr><td>3</td><td>素材版权底线</td><td>—</td><td><span class="rec">CC0 随便用；CC-BY/PMC 标注；发布形态决定采集范围</span></td></tr>
+      <tr><td>4</td><td>渲染实现</td><td>自己造</td><td><span class="rec">先拿资产清单（6 版本贴图）→ 有开源引擎直接复用</span></td></tr>
+    </table>
+  </section>
+
+  <section id="s7">
+    <div class="sec-title"><span class="n">7</span>铁律与验收</div>
+    <div class="grid">
+      <div class="card"><h3>⚖️ 铁律</h3>
+        <ul>
+          <li>所有改动在 v2 上 git 提交，改前 diff 改后 commit</li>
+          <li>旧 ai bulider 归档不动</li>
+          <li>official/user 双目录同步</li>
+          <li>中文注释与业务文案</li>
+          <li>GPL-3.0：保留原作者，素材许可兼容</li>
+        </ul>
+      </div>
+      <div class="card"><h3>✅ 验收点速查</h3>
+        <ul>
+          <li><b>P0</b>：双端通；B 成果全部可见</li>
+          <li><b>P1</b>：百格建筑局部修改只重建区块；材质无随机混搭</li>
+          <li><b>P2</b>：阴影/发光/水截图达标；流式思考上屏</li>
+          <li><b>P3</b>：能生成曲面建筑；search_structure 合理；案例库 ≥100 条</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    MC AI Builder v2 路线图 · 2026-08-26 合并 · 依据：官方源码（GPL-3.0）/ 本地 builder 10 提交 / 改版者日志 / OpenClaw 技术讨论
+  </footer>
+
+</div>
+</body>
+</html>
