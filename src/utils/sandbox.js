@@ -2,6 +2,61 @@
  * Sandbox for executing AI-generated voxel scripts.
  */
 
+/**
+ * 去重顶层 const 声明（防止 AI 修改代码时重复声明变量导致报错）
+ * 来源：builder@33998ec prompt-optimizer.js 防重复声明兜底
+ *
+ * 问题：AI 修改代码时偶尔把同一行 const 声明复制粘贴两遍（如 const DOOR_RX = ... 出现
+ *       2 次），或插入新代码块时保留旧声明块，导致 JS 报错
+ *       "Identifier 'X' has already been declared"，整个脚本不执行 → 0 方块。
+ *
+ * 策略：只处理 0 缩进（顶层）的 const 声明——同名保留最后一次声明、删除之前的重复行。
+ *       循环内/块级作用域的 const 都有缩进，不在此范围，不误删。
+ *       对无重复的代码是 no-op，不改变任何行为。
+ */
+function dedupeTopLevelConsts(code) {
+    if (typeof code !== 'string' || !code.includes('builder.')) return code;
+
+    const RE = /^const\s+([A-Za-z_$][\w$]*)\s*=/;
+    const lines = code.split('\n');
+    const counts = {};
+    const last = {};
+
+    // 统计每个顶层 const 变量的出现次数和最后位置
+    for (let i = 0; i < lines.length; i++) {
+        const m = RE.exec(lines[i]);
+        if (m) {
+            const varName = m[1];
+            counts[varName] = (counts[varName] || 0) + 1;
+            last[varName] = i;
+        }
+    }
+
+    // 检查是否有重复
+    let hasDup = false;
+    for (const k in counts) {
+        if (counts[k] > 1) {
+            hasDup = true;
+            break;
+        }
+    }
+
+    if (!hasDup) return code;
+
+    // 过滤掉重复的声明（保留最后一次）
+    const out = [];
+    for (let i = 0; i < lines.length; i++) {
+        const m = RE.exec(lines[i]);
+        if (m && counts[m[1]] > 1 && i !== last[m[1]]) {
+            // 删除非最后一次的重复顶层声明
+            continue;
+        }
+        out.push(lines[i]);
+    }
+
+    return out.join('\n');
+}
+
 class VoxelBuilder {
     constructor() {
         this.voxels = []; // Stores { position, type, mode?, properties?, groupId?, priority? }
@@ -1792,6 +1847,9 @@ export const executeVoxelScript = (code, throwOnError = false) => {
 
         if (!cleanCode) return [];
         if (!cleanCode.includes('builder.') && !cleanCode.includes('for (') && !cleanCode.includes('const ')) return [];
+
+        // 去重顶层 const 声明，防止 AI 修改时重复声明变量导致报错
+        cleanCode = dedupeTopLevelConsts(cleanCode);
 
         try {
             const sandboxFn = new Function('builder', cleanCode);

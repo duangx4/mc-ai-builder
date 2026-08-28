@@ -23,6 +23,7 @@ import DevConsoleModal from './components/DevConsoleModal';
 import MinecraftControls from './components/MinecraftControls';
 import MinecraftHUD from './components/MinecraftHUD';
 import { MousePointer2, Plane } from 'lucide-react';
+import PromptOptimizer from './components/PromptOptimizer';
 
 /**
  * @typedef {Object} Variant
@@ -2889,6 +2890,14 @@ ${finalCode}
           )}
 
           <div className="relative group">
+            {/* Prompt Optimizer - Above input */}
+            <PromptOptimizer
+              inputText={inputText}
+              onOptimized={(optimizedText) => setInputText(optimizedText)}
+              messages={messages}
+              settings={settings}
+            />
+
             {/* Image Previews - Above the input */}
             {attachedImages.length > 0 && (
               <div className="mb-2 p-2 bg-neutral-800/80 border border-white/10 rounded-lg flex items-center gap-2 flex-wrap">
