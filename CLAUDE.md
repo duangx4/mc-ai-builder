@@ -47,7 +47,7 @@ npm run build && npm run electron:build   # 打包
 
 ## 待办（重构方向，见 `重构升级计划.md`）
 
-1. 逐个评估迁入 `MC\builder` 的 10 个提交（gates 大门形制 / prompt-optimizer 提示词优化 / 生图预览 / 中式古典风格等）
+1. ✅ 评估迁入 `MC\builder` 的 10 个提交（gates 大门形制 / prompt-optimizer / 生图预览 / 中式古典风格等）——**2026-08-28 完成**，见 `MIGRATION_REPORT.md` 与 `docs/mc-p0-migration.md`（c65c4be / ed5dee0 / 9b12a5a / 403cca0；生图预览官方原生已含，未重复实现）
 2. 模型配置成本地持久化（现为浏览器 localStorage `mc-ai-settings`）
 3. 生成质量控制（结构合理性检查前端化）
 4. 工程化补齐：lint/test/CI/打包链
