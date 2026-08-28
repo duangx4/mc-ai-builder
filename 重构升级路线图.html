@@ -134,6 +134,9 @@
     <p class="sub">合并依据：官方源码 · 本地 10 提交实战成果 · 改版者日志（40+ 轮迭代）· 技术路线讨论（SDF 体素化 / 结构库 RAG / 素材采集）</p>
     <div class="pill-row">
       <span class="pill g">✅ 基线可跑</span>
+      <span class="pill g">✅ P0 打底完成（8/28）</span>
+      <span class="pill g">✅ P1·① 智能构建引擎（8/28）</span>
+      <span class="pill g">✅ P1·② 分区流水线（8/29）</span>
       <span class="pill">阶段状态机</span>
       <span class="pill">多 Agent 流水线</span>
       <span class="pill b">原版级渲染</span>
@@ -170,10 +173,10 @@
       <div class="card"><h3>🟢 官方源码 <span class="tag">v2 基线 · 5 commits</span></h3>
         <ul><li>✅ 可跑：3001 后端 + 5173 前端冒烟通过</li><li>✅ 6 技能完整（knowledge→planning→construction→inspection→decoration→quality）</li></ul>
       </div>
-      <div class="card"><h3>📦 builder 10 提交 <span class="tag">未迁入</span></h3>
-        <ul><li>大门形制（gates.md 三层覆盖）</li><li>中式古典风格（梁思成）</li><li>提示词优化器 / 去重兜底</li><li>生图预览工作流</li></ul>
+      <div class="card"><h3>📦 builder 10 提交 <span class="tag">✅ 已迁入（8/28）</span></h3>
+        <ul><li>✅ 大门形制（gates.md 三层覆盖）</li><li>✅ 中式古典风格（梁思成）</li><li>✅ 提示词优化器 / 去重兜底</li><li>✅ 生图预览（官方原生已含，未重复实现）</li></ul>
       </div>
-      <div class="card"><h3>📄 改版者日志 <span class="tag">信息资产 · 待利用</span></h3>
+      <div class="card"><h3>📄 改版者日志 <span class="tag">已提炼（8/26）</span></h3>
         <ul><li>同一官方仓库的重制记录</li><li>一份写好的实施手册</li><li>架构 / 渲染 / 流式全套方案</li></ul>
       </div>
       <div class="card"><h3>🚀 SDF / RAG / 素材采集 <span class="tag">未开工</span></h3>
@@ -307,21 +310,21 @@
     <div class="sec-title"><span class="n">5</span>合并路线图</div>
 
     <div class="phase">
-      <div class="ph"><b>P0 · 打底</b><span>能跑、能回滚</span></div>
+      <div class="ph"><b>P0 · 打底</b><span>✅ 全部完成（2026-08-28）</span></div>
       <ul>
-        <li class="done">官方基线入库（已 5 commits）</li>
-        <li>迁入 builder 10 提交（对比 9b25e99 逐条筛选）</li>
-        <li>工程化：scripts / lint / test / 设置 Schema</li>
-        <li>AI 服务层：思考强度 / 退避 / 流式跨包修复</li>
+        <li class="done">官方基线入库</li>
+        <li class="done">迁入 builder 10 提交（c65c4be / ed5dee0 / 9b12a5a）</li>
+        <li class="done">工程化：scripts / lint+测试 54 绿 / 设置 Schema 迁移（c985a00 等）</li>
+        <li class="done">AI 服务层：思考强度四档 / 超时退避 / 流式跨包修复（c90a51f / 1d063d8 / f7ebe09）</li>
       </ul>
     </div>
 
     <div class="phase">
-      <div class="ph"><b>P1 · 生成质量</b><span>改版者核心价值</span></div>
+      <div class="ph"><b>P1 · 生成质量</b><span>改版者核心价值 · 2/4 完成</span></div>
       <ul>
-        <li>合并为"智能构建"引擎（阶段流护栏）</li>
-        <li>多 Agent 分区流水线 + 递归细分</li>
-        <li>区块衔接规划 + 校验</li>
+        <li class="done">智能构建引擎：五阶段状态机 + 工具护栏（97f44b4 / ab9cfcf / df4790a）</li>
+        <li class="done">分区流水线：递归细分 + 只重建受影响 + 并行编排（561278d / 2dc7ba7 / 80bd265 / a887be1）</li>
+        <li>区块衔接规划 + 校验（merge 已有 warning 种子）</li>
         <li>材质直通：1300+ 材质库 + 一致性铁律</li>
       </ul>
     </div>
@@ -382,7 +385,7 @@
   </section>
 
   <footer>
-    MC AI Builder v2 路线图 · 2026-08-26 合并 · 依据：官方源码（GPL-3.0）/ 本地 builder 10 提交 / 改版者日志 / OpenClaw 技术讨论
+    MC AI Builder v2 路线图 · 2026-08-26 合并 · 2026-08-29 更新（P0 完成 + P1·①② 完成）· 依据：官方源码（GPL-3.0）/ 本地 builder 10 提交 / 改版者日志 / OpenClaw 技术讨论
   </footer>
 
 </div>
