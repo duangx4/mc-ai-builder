@@ -186,9 +186,27 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
+  // 7. 中式-古典建筑 (Classical)
+  chinese_classical: {
+    keywords: ['chinese classical', 'traditional chinese', 'tang dynasty', 'song dynasty', 'chinese architecture', '中式古典', '中国传统', '唐风', '宋韵', '殿堂', '楼阁', '木构', '梁思成'],
+    name: '中式古典建筑风格 (Chinese Classical)',
+    knowledge: `
+## 🏮 中式古典建筑专业知识
+- **核心特征**: 木构架体系、中轴对称、反宇飞檐。基于梁思成《中国建筑史》体系。
+- **重要**: 详细知识请使用 read_subdoc 查阅 'chinese_classical' 获取完整内容（木构体系、斗拱、屋顶形制、大门形制等）。
+- **快速要点**:
+  - 木构架不承重墙体（"墙倒屋不塌"）
+  - 平面以"间"为单位，奇数开间，明间居中
+  - 屋顶：庑殿>歇山>悬山>硬山，檐角起翘
+  - 斗拱：唐代雄大、宋代柔和、明清细密
+  - **大门是门洞/门楼，不是木门方块**
+- **材料**: 台基 stone_bricks, 立柱 dark_oak_log, 粉墙 white_concrete, 官式红墙 red_concrete, 灰瓦 deepslate_tile_stairs
+`
+  },
+
   // ============ 中世纪风格 (Medieval) ============
 
-  // 7. 中世纪-哥特 (Gothic)
+  // 8. 中世纪-哥特 (Gothic)
   medieval_gothic: {
     keywords: ['cathedral', 'church', 'gothic', 'spire', 'abbey', '教堂', '大教堂', '哥特', '尖塔', '修道院'],
     name: '哥特式风格 (Gothic)',
@@ -204,14 +222,14 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
-  // 8. 中世纪-城堡 (Castle)
+  // 9. 中世纪-城堡 (Castle)
   medieval_castle: {
     keywords: ['castle', 'fortress', 'wall', 'keep', 'tower', 'citadel', '城堡', '要塞', '城墙', '塔楼', '堡垒'],
     name: '中世纪城堡风格 (Medieval Castle)',
     knowledge: `
 ## 🏰 中世纪城堡专业知识 (Medieval Castle)
 - **核心特征**: 防御性、厚重、封闭。但拒绝千篇一律！
-- **Random Architectural Variations (Pick ONE!)**: 
+- **Random Architectural Variations (Pick ONE!)**:
   1. **The Concentric Fortress**: Symmetrical, square keep in center, surrounded by lower outer walls.
   2. **The Asymmetrical Hill-Fort**: Adapts to terrain, irregular shape, towers of DIFFERENT heights.
   3. **The Palatial Keep**: Tall, complex roof lines, more decorative windows, less defensive.
@@ -227,7 +245,7 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
-  // 9. 中世纪-乡村 (Rustic)
+  // 10. 中世纪-乡村 (Rustic)
   medieval_rustic: {
     keywords: ['medieval house', 'cottage', 'village', 'cabin', 'farmhouse', 'tavern', 'inn', '中世纪小屋', '村庄', '小屋', '农舍', '酒馆', '旅店', '木屋'],
     name: '中世纪乡村风格 (Medieval Rustic)',
@@ -248,12 +266,12 @@ export const STYLE_KNOWLEDGE = {
 
   // ============ 现代风格 (Modern) ============
 
-  // 10. 现代-极简/住宅 (Minimalist)
+  // 11. 现代-极简/住宅 (Minimalist)
   modern_minimalist: {
     keywords: ['modern house', 'villa', 'minimalist', 'modern home', 'mansion', 'bauhaus', '现代别墅', '现代住宅', '极简', '豪宅', '包豪斯', '现代小屋'],
     name: '现代极简风格 (Modern Minimalist)',
     knowledge: `
-## � 现代极简建筑专业知识
+## 🏠 现代极简建筑专业知识
 - **核心特征**: 几何感、白色主调、大玻璃。Less is More.
 - **材料**: White Concrete, Quartz, Cyan Terracotta (灰色), Glass Panes.
 - **结构细节**:
@@ -264,7 +282,7 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
-  // 11. 现代-摩天大楼 (Skyscraper)
+  // 12. 现代-摩天大楼 (Skyscraper)
   modern_skyscraper: {
     keywords: ['skyscraper', 'highrise', 'office building', 'tower block', 'city', '摩天大楼', '写字楼', '办公楼', '大厦', '城市建筑'],
     name: '现代摩天大楼 (Modern Skyscraper)',
@@ -282,7 +300,7 @@ export const STYLE_KNOWLEDGE = {
 
   // ============ 幻想与科幻 (Fantasy & Sci-Fi) ============
 
-  // 12. 赛博朋克 (Cyberpunk)
+  // 13. 赛博朋克 (Cyberpunk)
   cyberpunk: {
     keywords: ['cyberpunk', 'neon', 'futuristic', 'sci-fi', '2077', '赛博朋克', '霓虹', '科幻', '未来', '赛博'],
     name: '赛博朋克风格 (Cyberpunk)',
@@ -298,7 +316,7 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
-  // 13. 幻想-魔法 (Magic)
+  // 14. 幻想-魔法 (Magic)
   fantasy_magic: {
     keywords: ['wizard', 'magic', 'sorcerer', 'mage', 'tower', 'fantasy', '巫师', '魔法', '法师', '魔塔', '奇幻'],
     name: '奇幻魔法风格 (Fantasy Magic)',
@@ -314,7 +332,7 @@ export const STYLE_KNOWLEDGE = {
 `
   },
 
-  // 14. 幻想-自然 (Nature/Elf)
+  // 15. 幻想-自然 (Nature/Elf)
   fantasy_nature: {
     keywords: ['elf', 'elven', 'fairy', 'treehouse', 'organic', 'nature', '精灵', '树屋', '仙境', '自然', '森林'],
     name: '精灵/自然风格 (Elven Nature)',
