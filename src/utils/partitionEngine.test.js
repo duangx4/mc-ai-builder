@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { partitionPlan, diffBlocks, mergeBlockCodes, extractBlockCode } from './partitionEngine.js';
+import { describe, it, expect, vi } from 'vitest';
+import { partitionPlan, diffBlocks, mergeBlockCodes, extractBlockCode, runPartitionedBuild } from './partitionEngine.js';
 
 describe('partitionPlan', () => {
   it('should not subdivide small buildings', () => {
@@ -309,5 +309,86 @@ builder.set(0, 0, 0, "stone");
     expect(extractBlockCode(null, 'test')).toBe(null);
     expect(extractBlockCode('code', null)).toBe(null);
     expect(extractBlockCode('', '')).toBe(null);
+  });
+});
+
+describe('runPartitionedBuild', () => {
+  it('should handle empty tasks gracefully', async () => {
+    const config = {
+      userMessage: 'test',
+      plan: { blocks: [] },
+      tasks: [],
+      apiKey: 'test',
+      baseUrl: 'http://test',
+      model: 'test',
+      callbacks: {}
+    };
+
+    const result = await runPartitionedBuild(config);
+
+    expect(result.code).toBe('');
+    expect(result.skippedCount).toBe(0);
+  });
+
+  it('should skip unchanged blocks when currentCode provided', async () => {
+    const oldCode = `// BLOCK block1 START
+builder.set(0, 0, 0, "stone");
+// BLOCK block1 END`;
+
+    const config = {
+      userMessage: 'test',
+      plan: { style: 'test', blocks: [] },
+      tasks: [
+        { id: 'block1', name: 'test', position: [0, 0, 0], size: [10, 10, 10], materials: ['stone'] }
+      ],
+      prevTasks: [
+        { id: 'block1', name: 'test', position: [0, 0, 0], size: [10, 10, 10], materials: ['stone'] }
+      ],
+      apiKey: 'test',
+      baseUrl: 'http://test',
+      model: 'test',
+      callbacks: {},
+      currentCode: oldCode
+    };
+
+    const result = await runPartitionedBuild(config);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.code).toContain('BLOCK block1');
+  });
+
+  it('should report partition count via callback', async () => {
+    const onPlanMock = vi.fn();
+
+    const config = {
+      userMessage: 'test',
+      plan: { blocks: [], style: 'test' },
+      tasks: [
+        { id: 'b1', name: 't1', position: [0, 0, 0], size: [10, 10, 10], materials: [] },
+        { id: 'b2', name: 't2', position: [20, 0, 0], size: [10, 10, 10], materials: [] }
+      ],
+      prevTasks: [
+        { id: 'b1', name: 't1', position: [0, 0, 0], size: [10, 10, 10], materials: [] },
+        { id: 'b2', name: 't2', position: [20, 0, 0], size: [10, 10, 10], materials: [] }
+      ],
+      apiKey: 'test',
+      baseUrl: 'http://test',
+      model: 'test',
+      callbacks: { onPlan: onPlanMock },
+      currentCode: `// BLOCK b1 START
+builder.set(0,0,0,"stone");
+// BLOCK b1 END
+
+// BLOCK b2 START
+builder.set(20,0,0,"wood");
+// BLOCK b2 END`
+    };
+
+    await runPartitionedBuild(config);
+
+    expect(onPlanMock).toHaveBeenCalled();
+    const callArg = onPlanMock.mock.calls[0][0];
+    expect(callArg.partitionCount).toBe(2);
+    expect(callArg.partitioned).toBe(true);
   });
 });

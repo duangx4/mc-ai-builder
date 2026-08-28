@@ -15,14 +15,15 @@
 import { fetchWithRetry } from './fetchWithRetry.js';
 import { createSSEParser } from './sseParser.js';
 import { executeVoxelScript, dedupeTopLevelConsts } from './sandbox.js';
-import { 
-  AGENT_TOOLS_V2, 
-  executeToolV2, 
+import {
+  AGENT_TOOLS_V2,
+  executeToolV2,
   getToolsSchemaV2,
   generateAgentSkillsPrompt,
   SKILLS_DATABASE
 } from './agentLoopV2.js';
 import { SYSTEM_PROMPT } from './prompts.js';
+import { partitionPlan, runPartitionedBuild } from './partitionEngine.js';
 
 // ============================================================
 // 阶段状态机 (Phase State Machine)
@@ -502,6 +503,72 @@ export async function generateWithSmartEngine(config) {
       plan = parseResult.plan;
       callbacks.onPlan?.(plan);
       callbacks.onStatus?.(`规划完成: ${plan.summary}`);
+
+      // 检查是否需要分区构建
+      const shouldPartition = settings.smartPartition !== false &&
+                              plan.blocks &&
+                              plan.blocks.length > 0;
+
+      if (shouldPartition) {
+        // 检查是否有大区块需要细分
+        const maxBlockSize = settings.maxBlockSize || 24;
+        const hasLargeBlocks = plan.blocks.some(block => {
+          const size = block.size || [10, 10, 10];
+          return Math.max(...size) > maxBlockSize;
+        });
+
+        // 如果区块数 > 1 或有大区块，使用分区构建
+        if (plan.blocks.length > 1 || hasLargeBlocks) {
+          callbacks.onStatus?.('检测到多区块或大区块，启用分区构建模式...');
+
+          // 执行分区规划
+          const tasks = partitionPlan(plan, {
+            maxBlockSize: settings.maxBlockSize || 24,
+            maxDepth: settings.partitionMaxDepth || 2,
+            minChildren: 2,
+            maxChildren: 6
+          });
+
+          callbacks.onStatus?.(`分区规划完成：${tasks.length} 个任务`);
+
+          // 使用分区构建
+          try {
+            const partitionResult = await runPartitionedBuild({
+              userMessage,
+              plan,
+              tasks,
+              apiKey,
+              baseUrl,
+              model,
+              callbacks,
+              currentCode,
+              imageUrl,
+              signal,
+              settings,
+              prevTasks: context.prevTasks || null
+            });
+
+            // 保存任务列表供下次 diff 使用
+            context.prevTasks = tasks;
+
+            // 直接使用分区构建的结果
+            generatedCode = partitionResult.code;
+
+            if (partitionResult.warnings.length > 0) {
+              lastErrors.push(...partitionResult.warnings);
+            }
+
+            // 跳过常规 construction 阶段，直接进入验证
+            changePhase(PHASES.VALIDATION, 'Partitioned build completed');
+            return;
+          } catch (error) {
+            callbacks.onStatus?.(`分区构建失败，回退到常规模式: ${error.message}`);
+            lastErrors.push(`Partition build failed: ${error.message}`);
+            // 继续常规流程
+          }
+        }
+      }
+
       changePhase(PHASES.CONSTRUCTION, 'Plan parsed successfully');
     } else {
       // 解析失败，但不阻塞，带警告进入 construction

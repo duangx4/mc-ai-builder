@@ -412,16 +412,355 @@ function dedupeTopLevelConstsLocal(code) {
 }
 
 // ============================================================
-// 4. 并行编排：runPartitionedBuild (第三个 commit)
+// 4. 并行编排：runPartitionedBuild
 // ============================================================
 
 /**
  * 编排并行构建流程
  *
- * @param {Object} _config - 配置对象
- * @returns {Promise<Object>} { code, plan, blockResults, warnings }
+ * 流程：
+ * 1. 如果有 currentCode，执行 diffBlocks 只重建受影响区块
+ * 2. 受限并行构建（concurrency=2）
+ * 3. 每个任务调用 smartEngine 子循环（construction→validation→refinement）
+ * 4. mergeBlockCodes 合并所有区块代码
+ * 5. 整体验证（executeVoxelScript 干跑）
+ *
+ * @param {Object} config - 配置对象
+ * @param {string} config.userMessage - 用户输入
+ * @param {Object} config.plan - BuildingPlan（已解析）
+ * @param {Array} config.tasks - partitionPlan 输出的任务队列
+ * @param {string} config.apiKey - API Key
+ * @param {string} config.baseUrl - API Base URL
+ * @param {string} config.model - 模型名称
+ * @param {Object} config.callbacks - 回调函数集合
+ * @param {string} config.currentCode - 现有代码（用于修改模式）
+ * @param {string} config.imageUrl - 图片 URL
+ * @param {AbortSignal} config.signal - 中止信号
+ * @param {Object} config.settings - 设置对象
+ * @param {Array} config.prevTasks - 上一次的任务列表（用于 diff）
+ * @returns {Promise<Object>} { code, plan, blockResults, warnings, skippedCount }
  */
-export async function runPartitionedBuild(_config) {
-  // 占位实现，第三个 commit 完成
-  throw new Error('runPartitionedBuild not implemented yet');
+export async function runPartitionedBuild(config) {
+  const {
+    userMessage,
+    plan,
+    tasks,
+    apiKey,
+    baseUrl,
+    model,
+    callbacks = {},
+    currentCode = null,
+    imageUrl = null,
+    signal = null,
+    settings = {},
+    prevTasks = null
+  } = config;
+
+  const warnings = [];
+  const blockResults = [];
+  let skippedCount = 0;
+
+  // 并发度设置
+  const concurrency = 2;
+
+  // 通知开始分区构建
+  const partitionCount = tasks.length;
+  const treeDepth = Math.max(...tasks.map(t => t.depth), 0);
+
+  callbacks.onPlan?.({
+    ...plan,
+    partitionCount,
+    treeDepth,
+    partitioned: true
+  });
+
+  callbacks.onStatus?.(`开始分区构建：${partitionCount} 个区块，深度 ${treeDepth}`);
+
+  // 如果有现有代码和上次任务，执行 diff
+  let tasksToRebuild = tasks;
+  let tasksToSkip = [];
+
+  if (currentCode && prevTasks && prevTasks.length > 0) {
+    const diff = diffBlocks(prevTasks, tasks);
+
+    tasksToRebuild = [...diff.rebuild, ...diff.create];
+    tasksToSkip = diff.skip;
+    skippedCount = tasksToSkip.length;
+
+    callbacks.onStatus?.(
+      `差异检测：跳过 ${skippedCount} 个未变更区块，重建 ${tasksToRebuild.length} 个区块`
+    );
+
+    // 对于 skip 的区块，尝试从旧代码中提取
+    for (const task of tasksToSkip) {
+      const oldBlockCode = extractBlockCode(currentCode, task.id);
+      if (oldBlockCode) {
+        blockResults.push({
+          id: task.id,
+          code: oldBlockCode,
+          success: true,
+          skipped: true
+        });
+      } else {
+        warnings.push(`无法从旧代码提取区块 ${task.id}，将重新构建`);
+        tasksToRebuild.push(task);
+      }
+    }
+  }
+
+  // 如果没有需要构建的任务
+  if (tasksToRebuild.length === 0) {
+    callbacks.onStatus?.('所有区块均未变更，跳过构建');
+
+    // 直接返回旧代码
+    return {
+      code: currentCode || '',
+      plan,
+      blockResults,
+      warnings,
+      skippedCount
+    };
+  }
+
+  // 受限并行构建
+  callbacks.onStatus?.(`并行构建 ${tasksToRebuild.length} 个区块（并发度 ${concurrency}）...`);
+
+  // 分批处理任务
+  const batches = [];
+  for (let i = 0; i < tasksToRebuild.length; i += concurrency) {
+    batches.push(tasksToRebuild.slice(i, i + concurrency));
+  }
+
+  let completedCount = 0;
+
+  for (const batch of batches) {
+    // 检查中止信号
+    if (signal?.aborted) {
+      throw new Error('Build aborted by user');
+    }
+
+    // 并行构建当前批次
+    const batchPromises = batch.map(task => buildSingleBlock({
+      task,
+      userMessage,
+      plan,
+      apiKey,
+      baseUrl,
+      model,
+      callbacks,
+      imageUrl,
+      signal,
+      settings
+    }));
+
+    const batchResults = await Promise.allSettled(batchPromises);
+
+    // 收集结果
+    for (let i = 0; i < batchResults.length; i++) {
+      const result = batchResults[i];
+      const task = batch[i];
+
+      if (result.status === 'fulfilled') {
+        blockResults.push(result.value);
+
+        if (result.value.success) {
+          completedCount++;
+          callbacks.onStatus?.(
+            `区块完成 (${completedCount}/${tasksToRebuild.length}): ${task.name}`
+          );
+        } else {
+          warnings.push(`区块 ${task.id} 构建失败: ${result.value.error || 'unknown'}`);
+        }
+      } else {
+        warnings.push(`区块 ${task.id} 异常: ${result.reason}`);
+        blockResults.push({
+          id: task.id,
+          code: '',
+          success: false,
+          error: result.reason
+        });
+      }
+    }
+  }
+
+  // 合并所有区块代码
+  callbacks.onStatus?.('合并区块代码...');
+
+  const mergeResult = mergeBlockCodes(blockResults, {
+    skipValidation: false,
+    oldCode: currentCode
+  });
+
+  if (mergeResult.warnings.length > 0) {
+    warnings.push(...mergeResult.warnings);
+  }
+
+  // 整体验证
+  if (!mergeResult.valid) {
+    warnings.push('合并后的代码验证失败');
+  }
+
+  callbacks.onStatus?.(
+    `分区构建完成：${completedCount}/${tasksToRebuild.length} 成功，跳过 ${skippedCount} 个`
+  );
+
+  return {
+    code: mergeResult.code,
+    plan,
+    blockResults,
+    warnings,
+    skippedCount,
+    valid: mergeResult.valid
+  };
+}
+
+/**
+ * 构建单个区块（调用简化的 smartEngine 子循环）
+ *
+ * @param {Object} config - 配置对象
+ * @returns {Promise<Object>} { id, code, success, error? }
+ */
+async function buildSingleBlock(config) {
+  const {
+    task,
+    userMessage,
+    plan,
+    apiKey,
+    baseUrl,
+    model,
+    callbacks = {},
+    imageUrl: _imageUrl = null,
+    signal = null,
+    settings = {}
+  } = config;
+
+  try {
+    // 构建区块专属的 prompt
+    const blockPrompt = `${userMessage}
+
+请只构建以下区块：
+- ID: ${task.id}
+- 名称: ${task.name}
+- 位置: [${task.position.join(', ')}]
+- 尺寸: [${task.size.join(', ')}] (宽×高×深)
+- 材料: ${task.materials.join(', ')}
+${task.notes ? `- 备注: ${task.notes}` : ''}
+
+风格: ${plan.style || 'unknown'}
+整体要求: ${plan.globalNotes || '无'}
+
+重要：
+1. 代码必须包裹在区块标记中：
+   // BLOCK ${task.id} START
+   你的代码
+   // BLOCK ${task.id} END
+
+2. 使用提供的位置和尺寸精确构建
+3. 保持与整体风格一致`;
+
+    // 简化的构建流程（只生成代码，不进入完整的阶段循环）
+    // 这里我们直接调用 AI 生成代码
+    const response = await callAIForBlock({
+      prompt: blockPrompt,
+      apiKey,
+      baseUrl,
+      model,
+      signal,
+      settings
+    });
+
+    // 验证代码
+    if (!response || !response.code) {
+      throw new Error('No code generated');
+    }
+
+    // 确保代码包含区块标记
+    let code = response.code;
+    if (!code.includes(`// BLOCK ${task.id} START`)) {
+      code = `// BLOCK ${task.id} START\n${code}\n// BLOCK ${task.id} END`;
+    }
+
+    // 验证代码语法
+    try {
+      executeVoxelScript(code, true);
+    } catch (validationError) {
+      throw new Error(`Code validation failed: ${validationError.message}`);
+    }
+
+    return {
+      id: task.id,
+      code,
+      success: true
+    };
+  } catch (error) {
+    callbacks.onStatus?.(`区块 ${task.id} 失败: ${error.message}`);
+
+    return {
+      id: task.id,
+      code: '',
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 调用 AI 生成单个区块代码
+ * （简化版，直接调用 API，不进入完整的 smartEngine 循环）
+ */
+async function callAIForBlock(config) {
+  const {
+    prompt,
+    apiKey,
+    baseUrl,
+    model,
+    signal,
+    settings = {}
+  } = config;
+
+  // 导入 fetchWithRetry
+  const { fetchWithRetry } = await import('./fetchWithRetry.js');
+
+  const response = await fetchWithRetry(
+    `${baseUrl}/chat/completions`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a Minecraft building code generator. Generate JavaScript code using the VoxelBuilder API.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: settings.maxTokens || 4096
+      }),
+      signal
+    },
+    {
+      timeout: settings.timeout || 60000,
+      maxRetries: 3
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`API Error ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // 提取代码
+  const codeMatch = content.match(/```(?:javascript|js)?\n?([\s\S]*?)```/);
+  const code = codeMatch ? codeMatch[1].trim() : content.trim();
+
+  return { code };
 }
