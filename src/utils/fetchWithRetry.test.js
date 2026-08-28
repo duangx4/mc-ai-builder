@@ -123,17 +123,14 @@ describe('fetchWithRetry', () => {
 
     global.fetch.mockRejectedValueOnce(abortError);
 
-    const promise = fetchWithRetry('https://example.com', {}, { maxRetries: 3 });
+    // 立即挂 rejection 断言（避免 advanceTimers flush 微任务时产生 unhandled rejection）
+    const assertion = expect(
+      fetchWithRetry('https://example.com', {}, { maxRetries: 3 })
+    ).rejects.toThrow('Aborted');
 
     await vi.advanceTimersByTimeAsync(1);
 
-    // 使用 try-catch 来捕获 rejection，避免 unhandled rejection
-    try {
-      await promise;
-      expect.fail('Should have thrown');
-    } catch (err) {
-      expect(err.message).toBe('Aborted');
-    }
+    await assertion;
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -146,19 +143,16 @@ describe('fetchWithRetry', () => {
 
     global.fetch.mockResolvedValue(errorResponse);
 
-    const promise = fetchWithRetry('https://example.com', {}, { maxRetries: 2 });
+    // 立即挂 rejection 断言（避免 advanceTimers flush 微任务时产生 unhandled rejection）
+    const assertion = expect(
+      fetchWithRetry('https://example.com', {}, { maxRetries: 2 })
+    ).rejects.toThrow('HTTP 500');
 
     await vi.advanceTimersByTimeAsync(1);
     await vi.advanceTimersByTimeAsync(1500); // 第 1 次重试
     await vi.advanceTimersByTimeAsync(2500); // 第 2 次重试
 
-    // 使用 try-catch 来捕获 rejection，避免 unhandled rejection
-    try {
-      await promise;
-      expect.fail('Should have thrown');
-    } catch (err) {
-      expect(err.message).toContain('HTTP 500');
-    }
+    await assertion;
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
