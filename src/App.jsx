@@ -19,6 +19,7 @@ import { applyCodeEdit } from './utils/codeEditor';
 import { agentGenerateV2 } from './utils/twoStepAI';
 import { setAgentDebugMode } from './utils/agentLoopV2';
 import DevConsoleModal from './components/DevConsoleModal';
+import { loadSettings } from './utils/settingsSchema';
 
 import MinecraftControls from './components/MinecraftControls';
 import MinecraftHUD from './components/MinecraftHUD';
@@ -404,23 +405,11 @@ function App() {
   });
   const [viewingCode, setViewingCode] = useState(null); // Code string to view in modal
   const [apiSettings, setApiSettings] = useState(() => {
-    const saved = localStorage.getItem('mc-ai-settings');
-    // Ensure all settings have defaults
-    const defaults = {
-      apiKey: '',
-      baseUrl: 'https://api.openai.com/v1',
-      model: 'gpt-3.5-turbo',
-      imageModel: 'dall-e-3',
-      generationMode: 'fast', // Default to Fast mode
-      mouseSensitivity: 1.0,
-      fov: 75,
-      debugMode: false,
-      concurrencyCount: 1  // 新增：默认并发数为 1
-    };
-    const merged = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    // 使用统一的设置 Schema 加载配置（自动迁移旧配置）
+    const settings = loadSettings('mc-ai-settings', 'mc-ai-settings');
     // Apply debug mode on initial load
-    setAgentDebugMode(merged.debugMode === true);
-    return merged;
+    setAgentDebugMode(settings.debugMode === true);
+    return settings;
   });
 
   const messages = currentMessages;
