@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { partitionPlan, diffBlocks } from './partitionEngine.js';
+import { partitionPlan, diffBlocks, mergeBlockCodes, extractBlockCode } from './partitionEngine.js';
 
 describe('partitionPlan', () => {
   it('should not subdivide small buildings', () => {
@@ -181,5 +181,133 @@ describe('diffBlocks', () => {
 
   it('should handle empty inputs', () => {
     expect(diffBlocks([], []).skip).toHaveLength(0);
+  });
+});
+
+describe('mergeBlockCodes', () => {
+  it('should merge multiple block codes', () => {
+    const blockResults = [
+      { id: 'block1', code: 'builder.set(0, 0, 0, "stone");', success: true },
+      { id: 'block2', code: 'builder.set(10, 0, 0, "wood");', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: true });
+
+    expect(result.code).toContain('// BLOCK block1 START');
+    expect(result.code).toContain('// BLOCK block1 END');
+    expect(result.code).toContain('// BLOCK block2 START');
+    expect(result.code).toContain('// BLOCK block2 END');
+    expect(result.code).toContain('builder.set(0, 0, 0, "stone")');
+    expect(result.code).toContain('builder.set(10, 0, 0, "wood")');
+  });
+
+  it('should filter out failed blocks', () => {
+    const blockResults = [
+      { id: 'block1', code: 'builder.set(0, 0, 0, "stone");', success: true },
+      { id: 'block2', code: 'invalid code', success: false, error: 'syntax error' },
+      { id: 'block3', code: 'builder.set(20, 0, 0, "glass");', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: true });
+
+    expect(result.code).toContain('BLOCK block1');
+    expect(result.code).toContain('BLOCK block3');
+    expect(result.code).not.toContain('BLOCK block2');
+  });
+
+  it('should handle empty block results', () => {
+    const result = mergeBlockCodes([]);
+
+    expect(result.code).toBe('');
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.valid).toBe(false);
+  });
+
+  it('should validate merged code when not skipped', () => {
+    const blockResults = [
+      { id: 'block1', code: 'builder.set(0, 0, 0, "stone");', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: false });
+
+    expect(result.valid).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it('should detect invalid code during validation', () => {
+    const blockResults = [
+      { id: 'block1', code: 'builder.invalidMethod();', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: false });
+
+    expect(result.valid).toBe(false);
+    expect(result.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('should deduplicate top-level const declarations', () => {
+    const blockResults = [
+      { id: 'block1', code: 'const WALL_MAT = "stone";\nbuilder.set(0, 0, 0, WALL_MAT);', success: true },
+      { id: 'block2', code: 'const WALL_MAT = "stone";\nbuilder.set(10, 0, 0, WALL_MAT);', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: true });
+
+    // Count occurrences of "const WALL_MAT"
+    const matches = (result.code.match(/const WALL_MAT/g) || []);
+    expect(matches.length).toBe(1); // Should be deduplicated to 1
+  });
+
+  it('should preserve old block code when provided', () => {
+    const oldCode = `// BLOCK oldBlock START
+builder.set(5, 5, 5, "dirt");
+// BLOCK oldBlock END`;
+
+    const blockResults = [
+      { id: 'newBlock', code: 'builder.set(0, 0, 0, "stone");', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: true, oldCode });
+
+    expect(result.code).toContain('BLOCK oldBlock START');
+    expect(result.code).toContain('builder.set(5, 5, 5, "dirt")');
+    expect(result.code).toContain('BLOCK newBlock START');
+  });
+
+  it('should handle duplicate block IDs', () => {
+    const blockResults = [
+      { id: 'block1', code: 'builder.set(0, 0, 0, "stone");', success: true },
+      { id: 'block1', code: 'builder.set(1, 1, 1, "wood");', success: true }
+    ];
+
+    const result = mergeBlockCodes(blockResults, { skipValidation: true });
+
+    expect(result.warnings.some(w => w.includes('Duplicate'))).toBe(true);
+  });
+});
+
+describe('extractBlockCode', () => {
+  it('should extract block code with markers', () => {
+    const code = `// BLOCK test START
+builder.set(0, 0, 0, "stone");
+// BLOCK test END`;
+
+    const extracted = extractBlockCode(code, 'test');
+
+    expect(extracted).toContain('// BLOCK test START');
+    expect(extracted).toContain('// BLOCK test END');
+    expect(extracted).toContain('builder.set');
+  });
+
+  it('should return null for missing markers', () => {
+    const code = 'builder.set(0, 0, 0, "stone");';
+
+    expect(extractBlockCode(code, 'test')).toBe(null);
+  });
+
+  it('should return null for invalid inputs', () => {
+    expect(extractBlockCode(null, 'test')).toBe(null);
+    expect(extractBlockCode('code', null)).toBe(null);
+    expect(extractBlockCode('', '')).toBe(null);
   });
 });

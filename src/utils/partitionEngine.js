@@ -229,26 +229,186 @@ function arraysEqual(a, b) {
 }
 
 // ============================================================
-// 3. 代码合并：mergeBlockCodes (下一个 commit)
+// 3. 代码合并：mergeBlockCodes
 // ============================================================
+
+import { executeVoxelScript } from './sandbox.js';
+
+/**
+ * 从代码中提取区块代码片段（基于标记）
+ *
+ * 约定：区块代码应该被 // BLOCK <id> START 和 // BLOCK <id> END 标记包裹
+ *
+ * @param {string} code - 完整代码
+ * @param {string} blockId - 区块 ID
+ * @returns {string|null} 区块代码片段，未找到返回 null
+ */
+export function extractBlockCode(code, blockId) {
+  if (!code || !blockId) return null;
+
+  const startMarker = `// BLOCK ${blockId} START`;
+  const endMarker = `// BLOCK ${blockId} END`;
+
+  const startIdx = code.indexOf(startMarker);
+  const endIdx = code.indexOf(endMarker);
+
+  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+    return null;
+  }
+
+  // 提取标记之间的代码（包含标记）
+  return code.substring(startIdx, endIdx + endMarker.length);
+}
 
 /**
  * 合并多个区块代码为完整代码
  *
  * 策略：
- * - 文件头（公共 utils/常量）→ 各区块函数 → 主函数依次调用
- * - 使用 dedupeTopLevelConsts 去重
- * - 干跑验证
+ * - 每个区块代码应该包裹在函数或 IIFE 中
+ * - 合并顺序：文件头（公共 utils/常量）→ 各区块函数 → 主函数依次调用
+ * - 使用区块标记：// BLOCK <id> START/END
+ * - 冲突兜底：dedupeTopLevelConsts（需要从 sandbox 导入）
+ * - 干跑验证：executeVoxelScript
  *
- * @param {Array} _blockResults - 区块构建结果 [{ id, code, success }]
- * @returns {Object} { code, warnings }
+ * @param {Array} blockResults - 区块构建结果 [{ id, code, success, error? }]
+ * @param {Object} options - 选项 { skipValidation?: boolean, oldCode?: string }
+ * @returns {Object} { code, warnings, valid }
  */
-export function mergeBlockCodes(_blockResults) {
-  // 占位实现，下一个 commit 完成
+export function mergeBlockCodes(blockResults, options = {}) {
+  const { skipValidation = false, oldCode = null } = options;
+  const warnings = [];
+
+  if (!Array.isArray(blockResults) || blockResults.length === 0) {
+    return { code: '', warnings: ['No block results to merge'], valid: false };
+  }
+
+  // 过滤出成功的区块
+  const successfulBlocks = blockResults.filter(b => b.success && b.code);
+
+  if (successfulBlocks.length === 0) {
+    return {
+      code: '',
+      warnings: ['No successful blocks to merge'],
+      valid: false
+    };
+  }
+
+  // 如果有旧代码，尝试提取 skip 区块的代码
+  const codeSegments = [];
+  const processedIds = new Set();
+
+  // 处理新生成的区块
+  for (const block of successfulBlocks) {
+    if (processedIds.has(block.id)) {
+      warnings.push(`Duplicate block id: ${block.id}`);
+      continue;
+    }
+
+    // 添加区块标记
+    const markedCode = `// BLOCK ${block.id} START\n${block.code}\n// BLOCK ${block.id} END`;
+    codeSegments.push(markedCode);
+    processedIds.add(block.id);
+  }
+
+  // 如果提供了旧代码，尝试提取 skip 区块（未在新结果中的区块）
+  if (oldCode) {
+    // 从旧代码中查找所有区块标记
+    const blockMarkerRegex = /\/\/ BLOCK (\S+) START/g;
+    let match;
+
+    while ((match = blockMarkerRegex.exec(oldCode)) !== null) {
+      const oldBlockId = match[1];
+
+      // 如果这个区块没有被重新生成，保留旧代码
+      if (!processedIds.has(oldBlockId)) {
+        const oldBlockCode = extractBlockCode(oldCode, oldBlockId);
+        if (oldBlockCode) {
+          codeSegments.push(oldBlockCode);
+          processedIds.add(oldBlockId);
+        } else {
+          warnings.push(`Could not extract old code for block: ${oldBlockId}`);
+        }
+      }
+    }
+  }
+
+  // 合并所有代码段
+  let mergedCode = codeSegments.join('\n\n');
+
+  // 去重顶层 const 声明（防止冲突）
+  // 注意：需要在运行时动态导入，因为 sandbox.js 可能还未加载
+  try {
+    // 尝试使用 dedupeTopLevelConsts（如果可用）
+    // 由于我们不能直接导入 dedupeTopLevelConsts（它不是导出的），
+    // 我们需要自己实现一个简单版本或者跳过这一步
+    // 这里我们实现一个简化版本
+    mergedCode = dedupeTopLevelConstsLocal(mergedCode);
+  } catch (e) {
+    warnings.push(`Deduplication warning: ${e.message}`);
+  }
+
+  // 干跑验证（如果未跳过）
+  let valid = true;
+  if (!skipValidation) {
+    try {
+      executeVoxelScript(mergedCode, true);
+    } catch (error) {
+      valid = false;
+      warnings.push(`Validation failed: ${error.message}`);
+    }
+  }
+
   return {
-    code: '',
-    warnings: []
+    code: mergedCode,
+    warnings,
+    valid
   };
+}
+
+/**
+ * 本地简化版 dedupeTopLevelConsts
+ * （复制自 sandbox.js 的逻辑）
+ */
+function dedupeTopLevelConstsLocal(code) {
+  if (typeof code !== 'string' || !code.includes('builder.')) return code;
+
+  const RE = /^const\s+([A-Za-z_$][\w$]*)\s*=/;
+  const lines = code.split('\n');
+  const counts = {};
+  const last = {};
+
+  // 统计每个顶层 const 变量的出现次数和最后位置
+  for (let i = 0; i < lines.length; i++) {
+    const m = RE.exec(lines[i]);
+    if (m) {
+      const varName = m[1];
+      counts[varName] = (counts[varName] || 0) + 1;
+      last[varName] = i;
+    }
+  }
+
+  // 检查是否有重复
+  let hasDup = false;
+  for (const k in counts) {
+    if (counts[k] > 1) {
+      hasDup = true;
+      break;
+    }
+  }
+
+  if (!hasDup) return code;
+
+  // 过滤掉重复的声明（保留最后一次）
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = RE.exec(lines[i]);
+    if (m && counts[m[1]] > 1 && i !== last[m[1]]) {
+      continue;
+    }
+    out.push(lines[i]);
+  }
+
+  return out.join('\n');
 }
 
 // ============================================================
