@@ -24,7 +24,12 @@ export const DEFAULT_SETTINGS = {
   generationMode: 'fast', // 生成模式：'fast' | 'workflow' | 'agentSkills'
   concurrencyCount: 1, // 并发生成数量
   thinkingEffort: 'off', // 思考强度：'off' | 'low' | 'medium' | 'high'
-  
+
+  // 分区构建配置（smart 模式）
+  smartPartition: true, // 启用分区构建（默认开启）
+  maxBlockSize: 24, // 最大区块尺寸（超过则细分）
+  partitionMaxDepth: 2, // 最大递归深度
+
   // UI 偏好
   mouseSensitivity: 1.0, // 鼠标灵敏度
   fov: 75, // 视野角度（Field of View）
@@ -108,6 +113,28 @@ export const SETTINGS_METADATA = {
       { value: 'medium', label: { zh: '中', en: 'Medium' } },
       { value: 'high', label: { zh: '高', en: 'High' } },
     ],
+    category: 'generation',
+  },
+  smartPartition: {
+    label: { zh: '智能分区构建', en: 'Smart Partition Build' },
+    type: 'boolean',
+    description: { zh: '大型建筑自动分区并行构建（仅 Smart 模式）', en: 'Auto partition large buildings (Smart mode only)' },
+    category: 'generation',
+  },
+  maxBlockSize: {
+    label: { zh: '最大区块尺寸', en: 'Max Block Size' },
+    type: 'number',
+    min: 16,
+    max: 64,
+    description: { zh: '区块任意维度超过此值将被细分', en: 'Blocks exceeding this size will be subdivided' },
+    category: 'generation',
+  },
+  partitionMaxDepth: {
+    label: { zh: '分区最大深度', en: 'Partition Max Depth' },
+    type: 'number',
+    min: 1,
+    max: 3,
+    description: { zh: '递归细分的最大深度', en: 'Maximum depth for recursive subdivision' },
     category: 'generation',
   },
   mouseSensitivity: {

@@ -854,6 +854,15 @@ function App() {
           console.log('[SmartEngine] Plan:', plan);
           // 可以存储 plan 到 variant 中用于显示
           updateVariant(variantId, { plan });
+
+          // 显示分区信息（如果启用了分区构建）
+          if (plan.partitioned && plan.partitionCount) {
+            const partitionMsg = `🔀 分区构建模式：${plan.partitionCount} 个区块，深度 ${plan.treeDepth || 0}`;
+            updateVariant(variantId, {
+              partitionInfo: partitionMsg
+            });
+            console.log(`[SmartEngine] ${partitionMsg}`);
+          }
         },
         onToolCall: (toolName, args, result) => {
           console.log(`[SmartEngine] Tool: ${toolName}`, result);
