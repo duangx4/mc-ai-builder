@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS = {
   maxTokens: 4000, // AI 生成最大 token 数
   generationMode: 'fast', // 生成模式：'fast' | 'workflow' | 'agentSkills'
   concurrencyCount: 1, // 并发生成数量
+  thinkingEffort: 'off', // 思考强度：'off' | 'low' | 'medium' | 'high'
   
   // UI 偏好
   mouseSensitivity: 1.0, // 鼠标灵敏度
@@ -98,6 +99,17 @@ export const SETTINGS_METADATA = {
     max: 10,
     category: 'generation',
   },
+  thinkingEffort: {
+    label: { zh: '思考强度', en: 'Thinking Effort' },
+    type: 'select',
+    options: [
+      { value: 'off', label: { zh: '关闭', en: 'Off' } },
+      { value: 'low', label: { zh: '低', en: 'Low' } },
+      { value: 'medium', label: { zh: '中', en: 'Medium' } },
+      { value: 'high', label: { zh: '高', en: 'High' } },
+    ],
+    category: 'generation',
+  },
   mouseSensitivity: {
     label: { zh: '鼠标灵敏度', en: 'Mouse Sensitivity' },
     type: 'number',
@@ -168,6 +180,7 @@ export function loadSettings(newKey = 'mc-ai-builder-settings', oldKey = 'mc-ai-
         mouseSensitivity: oldParsed.mouseSensitivity ?? DEFAULT_SETTINGS.mouseSensitivity,
         fov: oldParsed.fov ?? DEFAULT_SETTINGS.fov,
         concurrencyCount: oldParsed.concurrencyCount ?? DEFAULT_SETTINGS.concurrencyCount,
+        thinkingEffort: oldParsed.thinkingEffort ?? DEFAULT_SETTINGS.thinkingEffort,
         debugMode: oldParsed.debugMode ?? DEFAULT_SETTINGS.debugMode,
       };
       
