@@ -1,18 +1,19 @@
 /**
  * Two-Step AI Generation: Planning + Building
- * 
+ *
  * IMPORTANT: Both steps share the SAME conversation context!
  * - Step 1 (Planning) sees: SYSTEM_PROMPT + Planning instructions
  * - Step 2 (Building) sees: Step 1's plan + Building instructions
- * 
+ *
  * This preserves context across both API calls.
- * 
+ *
  * NEW: Agent Mode with Skills is also available via agentLoop.js
  * NEW: Agent Mode V2 uses Anthropic Agent Skills standard (document-driven)
  */
 
 import { VALID_BLOCKS_1_21 } from './validBlocks.js';
 import { SYSTEM_PROMPT } from './prompts.js';
+import { fetchWithRetry } from './fetchWithRetry.js';
 export { agentGenerateV2, runAgentLoopV2 } from './agentLoopV2.js';
 
 // Planning instruction (appended to main SYSTEM_PROMPT)
@@ -364,19 +365,29 @@ export async function twoStepGenerateWithContext(
     let plan = null;
 
     try {
-        const planResponse = await fetch(`${baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+        const planResponse = await fetchWithRetry(
+            `${baseUrl}/chat/completions`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: conversation,
+                    temperature: 0.7,
+                    max_tokens: 16384
+                })
             },
-            body: JSON.stringify({
-                model: model,
-                messages: conversation,
-                temperature: 0.7,
-                max_tokens: 323840
-            })
-        });
+            {
+                timeout: 120000,
+                maxRetries: 3,
+                onRetry: (attempt, delay) => {
+                    console.warn(`[Planning] Retry ${attempt}/3 after ${Math.round(delay)}ms`);
+                }
+            }
+        );
 
         if (!planResponse.ok) {
             const error = await planResponse.json().catch(() => ({}));
@@ -430,18 +441,29 @@ export async function twoStepGenerateWithContext(
 
         try {
             // We use NON-STREAMING here to allow validation before showing user
-            const response = await fetch(`${baseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+            const response = await fetchWithRetry(
+                `${baseUrl}/chat/completions`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: conversation,
+                        temperature: 0.7,
+                        max_tokens: 16384
+                    })
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: conversation,
-                    temperature: 0.7
-                })
-            });
+                {
+                    timeout: 120000,
+                    maxRetries: 3,
+                    onRetry: (attempt, delay) => {
+                        console.warn(`[Building] Retry ${attempt}/3 after ${Math.round(delay)}ms`);
+                    }
+                }
+            );
 
             if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
 
@@ -471,19 +493,30 @@ export async function twoStepGenerateWithContext(
                     role: 'user',
                     content: `你的代码被截断了，请从以下位置继续生成（不要重复已有的代码）：\n\`\`\`\n${lastLines}\n\`\`\`\n请直接继续输出剩余的代码，不需要重新开始。`
                 });
-                
-                const continueResponse = await fetch(`${baseUrl}/chat/completions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+
+                const continueResponse = await fetchWithRetry(
+                    `${baseUrl}/chat/completions`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: conversation,
+                            temperature: 0.7,
+                            max_tokens: 16384
+                        })
                     },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: conversation,
-                        temperature: 0.7
-                    })
-                });
+                    {
+                        timeout: 120000,
+                        maxRetries: 3,
+                        onRetry: (attempt, delay) => {
+                            console.warn(`[Continue] Retry ${attempt}/3 after ${Math.round(delay)}ms`);
+                        }
+                    }
+                );
                 
                 if (continueResponse.ok) {
                     const continueData = await continueResponse.json();
@@ -543,18 +576,29 @@ export async function twoStepGenerateWithContext(
             });
 
             try {
-                const refineResponse = await fetch(`${baseUrl}/chat/completions`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                const refineResponse = await fetchWithRetry(
+                    `${baseUrl}/chat/completions`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: conversation,
+                            temperature: 0.5, // Lower temperature for more focused refinement
+                            max_tokens: 16384
+                        })
                     },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: conversation,
-                        temperature: 0.5 // Lower temperature for more focused refinement
-                    })
-                });
+                    {
+                        timeout: 120000,
+                        maxRetries: 3,
+                        onRetry: (attempt, delay) => {
+                            console.warn(`[Refinement] Retry ${attempt}/3 after ${Math.round(delay)}ms`);
+                        }
+                    }
+                );
 
                 if (refineResponse.ok) {
                     const refineData = await refineResponse.json();

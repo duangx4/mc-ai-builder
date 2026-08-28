@@ -54,10 +54,17 @@ function debugSection(title) {
 // API RETRY CONFIGURATION
 // ============================================================
 const MAX_API_RETRIES = 3;
-const API_RETRY_DELAY_MS = 1500;
+const BASE_DELAY_MS = 1000; // 基础延迟改为 1000ms（与统一服务层一致）
+const JITTER_MAX_MS = 250;  // 抖动最大值
 
 /**
  * Fetch with automatic retry on transient errors
+ *
+ * 注意：此函数保留独立实现，不使用 fetchWithRetry.js，原因：
+ * 1. 需要 callbacks 参数用于实时日志回显（onDevLog/onStatus）
+ * 2. Agent 循环需要更细粒度的重试反馈
+ * 3. 功能已与统一服务层对齐（指数退避、Retry-After、抖动）
+ *
  * @param {string} url - API endpoint
  * @param {object} options - fetch options
  * @param {object} callbacks - for logging
@@ -81,11 +88,35 @@ async function fetchWithRetry(url, options, callbacks, maxRetries = MAX_API_RETR
             lastError = new Error(`API Error ${response.status}: ${errText}`);
 
             if (attempt < maxRetries) {
-                const delay = API_RETRY_DELAY_MS * attempt; // Exponential backoff
-                console.warn(`[Agent] API error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`);
+                let delay;
+
+                // 429 优先尊重 Retry-After 响应头
+                if (response.status === 429) {
+                    const retryAfter = response.headers.get('Retry-After');
+                    if (retryAfter) {
+                        const retryAfterSeconds = parseInt(retryAfter, 10);
+                        if (!isNaN(retryAfterSeconds)) {
+                            delay = retryAfterSeconds * 1000;
+                        } else {
+                            const retryDate = new Date(retryAfter);
+                            if (!isNaN(retryDate.getTime())) {
+                                delay = Math.max(0, retryDate.getTime() - Date.now());
+                            }
+                        }
+                    }
+                }
+
+                // 如果没有 Retry-After，使用指数退避 + 抖动
+                if (!delay) {
+                    const exponentialDelay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                    const jitter = Math.random() * JITTER_MAX_MS;
+                    delay = exponentialDelay + jitter;
+                }
+
+                console.warn(`[Agent] API error (attempt ${attempt}/${maxRetries}), retrying in ${Math.round(delay)}ms...`);
                 callbacks?.onDevLog?.({
                     type: 'warning',
-                    content: `⚠️ API Error (${response.status}), retrying in ${delay}ms... (attempt ${attempt}/${maxRetries})`
+                    content: `⚠️ API Error (${response.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt}/${maxRetries})`
                 });
                 callbacks?.onStatus?.(`API Error, retrying (${attempt}/${maxRetries})...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
@@ -100,11 +131,14 @@ async function fetchWithRetry(url, options, callbacks, maxRetries = MAX_API_RETR
 
             // Network errors - should retry
             if (attempt < maxRetries) {
-                const delay = API_RETRY_DELAY_MS * attempt;
-                console.warn(`[Agent] Network error (attempt ${attempt}/${maxRetries}), retrying in ${delay}ms...`, err.message);
+                const exponentialDelay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                const jitter = Math.random() * JITTER_MAX_MS;
+                const delay = exponentialDelay + jitter;
+
+                console.warn(`[Agent] Network error (attempt ${attempt}/${maxRetries}), retrying in ${Math.round(delay)}ms...`, err.message);
                 callbacks?.onDevLog?.({
                     type: 'warning',
-                    content: `⚠️ Network error, retrying in ${delay}ms... (attempt ${attempt}/${maxRetries})`
+                    content: `⚠️ Network error, retrying in ${Math.round(delay)}ms... (attempt ${attempt}/${maxRetries})`
                 });
                 callbacks?.onStatus?.(`Network error, retrying (${attempt}/${maxRetries})...`);
                 await new Promise(resolve => setTimeout(resolve, delay));

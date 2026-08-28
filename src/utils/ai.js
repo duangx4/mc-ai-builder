@@ -6,6 +6,8 @@
 import { detectStyle } from './styleKnowledge';
 import { SYSTEM_PROMPT } from './prompts.js';
 import { addLineNumbers } from './codeEditor.js';
+import { createSSEParser } from './sseParser.js';
+import { fetchWithRetry } from './fetchWithRetry.js';
 
 export { SYSTEM_PROMPT }; // Re-export for compatibility
 
@@ -21,6 +23,8 @@ export { SYSTEM_PROMPT }; // Re-export for compatibility
  * @param {string} currentCode - Existing code for modification context
  * @param {string} imageUrl - Vision input image URL
  * @param {Array} apiHistory - API-level conversation history (takes precedence over history)
+ * @param {Object} settings - Settings object (for thinkingEffort, maxTokens, etc.)
+ * @param {AbortSignal} signal - Abort signal for cancellation
  * @returns {Object} { content: string, messages: Array } - Response content and updated API history
  */
 export const fetchAIResponseStream = async (
@@ -32,7 +36,9 @@ export const fetchAIResponseStream = async (
     onChunk = null,
     currentCode = null,
     imageUrl = null,
-    apiHistory = null  // NEW: API-level conversation history
+    apiHistory = null,  // API-level conversation history
+    settings = null,    // NEW: Settings for thinking effort, max tokens, etc.
+    signal = null       // NEW: Abort signal
 ) => {
     if (!apiKey) throw new Error("API Key is missing.");
 
@@ -139,20 +145,48 @@ builder.fill(x1, topY, z1, x2, topY + 2, z2, 'WALL_MATERIAL');
 
     console.log('[AI Stream] Sending request to:', `${baseUrl}/chat/completions`);
 
+    // 构建请求 body
+    const requestBody = {
+        model: model,
+        messages: messages,
+        max_tokens: settings?.maxTokens || 16384,
+        stream: true
+    };
+
+    // 添加思考强度参数（如果启用）
+    const thinkingEffort = settings?.thinkingEffort || 'off';
+    if (thinkingEffort !== 'off') {
+        // 检查是否为 Gemini 模型（不支持 reasoning_effort）
+        const isGeminiModel = model.toLowerCase().includes('gemini');
+
+        if (!isGeminiModel) {
+            requestBody.reasoning_effort = thinkingEffort;
+            console.log('[AI Stream] Thinking effort enabled:', thinkingEffort);
+        } else {
+            console.log('[AI Stream] Thinking effort not supported for Gemini models, skipping');
+        }
+    }
+
     try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+        const response = await fetchWithRetry(
+            `${baseUrl}/chat/completions`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(requestBody),
+                signal: signal
             },
-            body: JSON.stringify({
-                model: model,
-                messages: messages,
-                max_tokens: 323840,
-                stream: true
-            })
-        });
+            {
+                timeout: 120000, // 120s 超时
+                maxRetries: 3,
+                onRetry: (attempt, delay, error) => {
+                    console.warn(`[AI Stream] Retry ${attempt}/3 after ${Math.round(delay)}ms: ${error.message}`);
+                }
+            }
+        );
 
         if (!response.ok) {
             const err = await response.json().catch(() => ({}));
@@ -163,29 +197,21 @@ builder.fill(x1, topY, z1, x2, topY + 2, z2, 'WALL_MATERIAL');
         const decoder = new TextDecoder("utf-8");
         let fullContent = "";
 
+        // 创建 SSE 解析器（跨包缓冲）
+        const parser = createSSEParser((data) => {
+            const content = data.choices?.[0]?.delta?.content || "";
+            if (content) {
+                fullContent += content;
+                if (onChunk) onChunk(content, fullContent);
+            }
+        });
+
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n");
-
-            for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const dataStr = line.replace("data: ", "").trim();
-                    if (dataStr === "[DONE]") break;
-                    try {
-                        const data = JSON.parse(dataStr);
-                        const content = data.choices[0]?.delta?.content || "";
-                        if (content) {
-                            fullContent += content;
-                            if (onChunk) onChunk(content, fullContent);
-                        }
-                    } catch (e) {
-                        // ignore parse errors for partial chunks
-                    }
-                }
-            }
+            const chunk = decoder.decode(value, { stream: true });
+            parser.feed(chunk);
         }
 
         // Build updated conversation history for next turn
@@ -335,11 +361,9 @@ export const fetchAIResponse = async (userPrompt, apiKey, baseUrl = 'https://api
 // Mode 2: Precise Generation (twoStepGenerateWithContext) - Planning + Building phases
 
 import {
-    PLANNING_PROMPT,
     parsePlanningResponse,
     createBuildingPromptFromPlan,
-    twoStepGenerateWithContext,
-    createPlanningSystemPrompt
+    twoStepGenerateWithContext
 } from './twoStepAI.js';
 
 // Re-export with "Precise" terminology for clarity
@@ -354,12 +378,14 @@ export const generateBuildingPlan = async (
     userPrompt,
     apiKey,
     baseUrl = 'https://api.openai.com/v1',
-    model = 'gpt-4o-mini',
-    onProgress = null
+    model = 'gpt-4o-mini'
 ) => {
     if (!apiKey) throw new Error("API Key is missing.");
 
     console.log('[AI Planning] Starting planning phase for:', userPrompt);
+
+    // Import PLANNING_PROMPT from twoStepAI
+    const { PLANNING_PROMPT } = await import('./twoStepAI.js');
 
     const messages = [
         { role: 'system', content: PLANNING_PROMPT },
