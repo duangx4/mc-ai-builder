@@ -74,10 +74,10 @@ export function getAllowedTools(phase) {
  * 检查是否可以从一个阶段转换到另一个阶段
  * @param {string} fromPhase - 当前阶段
  * @param {string} toPhase - 目标阶段
- * @param {string} reason - 转换原因（用于日志）
+ * @param {string} _reason - 转换原因（用于日志）
  * @returns {boolean} 是否允许转换
  */
-export function canTransition(fromPhase, toPhase, reason = '') {
+export function canTransition(fromPhase, toPhase, _reason = '') {
   const fromIndex = PHASE_ORDER.indexOf(fromPhase);
   const toIndex = PHASE_ORDER.indexOf(toPhase);
   
@@ -602,7 +602,7 @@ export async function generateWithSmartEngine(config) {
     });
 
     // 发起 LLM 请求
-    const response = await callLLMWithTools();
+    await callLLMWithTools();
 
     // 更新代码
     generatedCode = context.currentCode;
@@ -714,7 +714,7 @@ export async function generateWithSmartEngine(config) {
 
         try {
           args = JSON.parse(toolCall.function.arguments);
-        } catch (e) {
+        } catch {
           args = {};
         }
 

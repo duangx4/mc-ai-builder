@@ -20,6 +20,7 @@ import { agentGenerateV2 } from './utils/twoStepAI';
 import { setAgentDebugMode } from './utils/agentLoopV2';
 import DevConsoleModal from './components/DevConsoleModal';
 import { loadSettings } from './utils/settingsSchema';
+import { generateWithSmartEngine } from './utils/smartEngine';
 
 import MinecraftControls from './components/MinecraftControls';
 import MinecraftHUD from './components/MinecraftHUD';
@@ -818,10 +819,108 @@ function App() {
   };
 
   /**
+   * Smart 模式生成（使用智能构建引擎）
+   */
+  const generateVariantSmart = async (userMessage, variantIndex, signal, currentCode = null, imageUrl = null) => {
+    const variantId = `v${variantIndex}`;
+
+    try {
+      updateVariant(variantId, { status: 'generating' });
+
+      // 智能引擎回调
+      const callbacks = {
+        onPhaseChange: (phase, reason) => {
+          console.log(`[SmartEngine] Phase: ${phase} (${reason})`);
+          // 更新状态显示（可以显示在 UI 上）
+          const phaseLabels = {
+            planning: '🎯 规划中',
+            construction: '🏗️ 构建中',
+            validation: '✅ 验证中',
+            refinement: '🔧 修复中',
+            done: '✨ 完成'
+          };
+          updateVariant(variantId, {
+            currentPhase: phase,
+            phaseLabel: phaseLabels[phase] || phase
+          });
+        },
+        onChunk: (chunk, accumulated) => {
+          // 流式输出（可选：实时显示）
+        },
+        onStatus: (message) => {
+          console.log(`[SmartEngine] ${message}`);
+        },
+        onPlan: (plan) => {
+          console.log('[SmartEngine] Plan:', plan);
+          // 可以存储 plan 到 variant 中用于显示
+          updateVariant(variantId, { plan });
+        },
+        onToolCall: (toolName, args, result) => {
+          console.log(`[SmartEngine] Tool: ${toolName}`, result);
+        }
+      };
+
+      // 调用智能引擎
+      const result = await generateWithSmartEngine({
+        userMessage,
+        apiKey: apiSettings.apiKey,
+        baseUrl: apiSettings.baseUrl,
+        model: apiSettings.model,
+        callbacks,
+        currentCode,
+        imageUrl,
+        signal,
+        conversationHistory: apiConversationHistory,
+        settings: apiSettings
+      });
+
+      // 提取生成的代码
+      const codeMatch = result.content.match(/```(?:javascript|js)?\n([\s\S]*?)```/);
+      const code = codeMatch ? codeMatch[1].trim() : result.content.trim();
+
+      // 执行代码生成方块
+      const { executeVoxelScript } = await import('./utils/sandbox');
+      const voxels = executeVoxelScript(code, true);
+
+      // 转换为 blocks 格式
+      const newBlocks = voxels.map((v, i) => ({
+        id: `${Date.now()}-${i}`,
+        position: [v.x, v.y, v.z],
+        type: v.type,
+        properties: v.properties || {}
+      }));
+
+      // 更新变体
+      updateVariant(variantId, {
+        status: 'done',
+        content: result.content,
+        blocks: newBlocks,
+        semanticVoxels: voxels,
+        generatedAt: Date.now(),
+        plan: result.plan,
+        phases: result.phases,
+        truncated: result.truncated,
+        lastErrors: result.lastErrors
+      });
+
+      console.log(`[Smart] Generated ${newBlocks.length} blocks`);
+    } catch (error) {
+      console.error('[Smart] Generation error:', error);
+      updateVariant(variantId, {
+        status: 'error',
+        error: error.message,
+        generatedAt: Date.now()
+      });
+    }
+  };
+
+  /**
    * 生成单个变体（根据模式选择）
    */
   const generateVariant = async (userMessage, variantIndex, signal, currentCode = null, imageUrl = null, effectiveMode = 'fast') => {
-    if (effectiveMode === 'workflow' || effectiveMode === 'agentSkills') {
+    if (effectiveMode === 'smart') {
+      return generateVariantSmart(userMessage, variantIndex, signal, currentCode, imageUrl);
+    } else if (effectiveMode === 'workflow' || effectiveMode === 'agentSkills') {
       return generateVariantAgent(userMessage, variantIndex, signal, currentCode, imageUrl, effectiveMode);
     } else {
       return generateVariantFast(userMessage, variantIndex, signal, currentCode, imageUrl);
@@ -2840,6 +2939,13 @@ ${finalCode}
                   title="Agent Skills Mode: AI autonomously decides which skills to use"
                 >
                   🤖 自主
+                </button>
+                <button
+                  onClick={() => setGenerationMode('smart')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 ${generationMode === 'smart' ? 'bg-green-600/20 text-green-300 border border-green-500/30 shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
+                  title="Smart Mode: Multi-phase intelligent build engine with guardrails"
+                >
+                  <Sparkles size={12} /> 智能构建
                 </button>
               </div>
             </div>
