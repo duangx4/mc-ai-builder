@@ -765,11 +765,13 @@ async function callAIForBlock(config) {
     settings = {}
   } = config;
 
-  // 导入 fetchWithRetry
+  // 导入 fetchWithRetry + CORS 代理助手
   const { fetchWithRetry } = await import('./fetchWithRetry.js');
+  const { wrapRequest } = await import('./proxyHelper.js');
 
-  const response = await fetchWithRetry(
-    `${baseUrl}/chat/completions`,
+  const { url: reqUrl, fetchOptions } = wrapRequest(
+    baseUrl,
+    '/chat/completions',
     {
       method: 'POST',
       headers: {
@@ -791,7 +793,12 @@ async function callAIForBlock(config) {
         max_tokens: settings.maxTokens || 4096
       }),
       signal
-    },
+    }
+  );
+
+  const response = await fetchWithRetry(
+    reqUrl,
+    fetchOptions,
     {
       timeout: settings.timeout || 60000,
       maxRetries: 3

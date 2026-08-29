@@ -14,6 +14,7 @@
 import { VALID_BLOCKS_1_21 } from './validBlocks.js';
 import { SYSTEM_PROMPT } from './prompts.js';
 import { fetchWithRetry } from './fetchWithRetry.js';
+import { wrapRequest } from './proxyHelper.js';
 export { agentGenerateV2, runAgentLoopV2 } from './agentLoopV2.js';
 
 // Planning instruction (appended to main SYSTEM_PROMPT)
@@ -365,8 +366,9 @@ export async function twoStepGenerateWithContext(
     let plan = null;
 
     try {
-        const planResponse = await fetchWithRetry(
-            `${baseUrl}/chat/completions`,
+        const planResponse = await proxyFetchWithRetry(
+            baseUrl,
+            '/chat/completions',
             {
                 method: 'POST',
                 headers: {
@@ -429,7 +431,14 @@ export async function twoStepGenerateWithContext(
         content: `Great plan! Now proceed to PHASE 2: Generate the JavaScript code based on your plan above.${BUILDING_INSTRUCTION}`
     });
 
-    const MAX_RETRIES = 3;
+    
+// CORS 代理包装：botcf 等受限网关自动走同源 /api/ai-proxy（绕开浏览器跨域拦截）
+async function proxyFetchWithRetry(baseUrl, path, options, callbacks) {
+  const { url: reqUrl, fetchOptions } = wrapRequest(baseUrl, path, options);
+  return fetchWithRetry(reqUrl, fetchOptions, callbacks);
+}
+
+const MAX_RETRIES = 3;
     let attempts = 0;
     let success = false;
     let finalCode = '';
@@ -441,8 +450,9 @@ export async function twoStepGenerateWithContext(
 
         try {
             // We use NON-STREAMING here to allow validation before showing user
-            const response = await fetchWithRetry(
-                `${baseUrl}/chat/completions`,
+            const response = await proxyFetchWithRetry(
+                baseUrl,
+                '/chat/completions',
                 {
                     method: 'POST',
                     headers: {
@@ -494,8 +504,9 @@ export async function twoStepGenerateWithContext(
                     content: `你的代码被截断了，请从以下位置继续生成（不要重复已有的代码）：\n\`\`\`\n${lastLines}\n\`\`\`\n请直接继续输出剩余的代码，不需要重新开始。`
                 });
 
-                const continueResponse = await fetchWithRetry(
-                    `${baseUrl}/chat/completions`,
+                const continueResponse = await proxyFetchWithRetry(
+                    baseUrl,
+                    '/chat/completions',
                     {
                         method: 'POST',
                         headers: {
@@ -576,8 +587,9 @@ export async function twoStepGenerateWithContext(
             });
 
             try {
-                const refineResponse = await fetchWithRetry(
-                    `${baseUrl}/chat/completions`,
+                const refineResponse = await proxyFetchWithRetry(
+                    baseUrl,
+                    '/chat/completions',
                     {
                         method: 'POST',
                         headers: {

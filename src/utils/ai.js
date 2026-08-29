@@ -401,19 +401,25 @@ export const generateBuildingPlan = async (
     ];
 
     try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 323840
-            })
-        });
+        // botcf 等 CORS 受限网关自动走同源代理
+        const { url: reqUrl, fetchOptions } = wrapRequest(
+            baseUrl,
+            '/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 323840
+                })
+            }
+        );
+        const response = await fetch(reqUrl, fetchOptions);
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
