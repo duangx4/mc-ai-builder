@@ -3284,7 +3284,7 @@ ${finalCode}
           )}
 
           <CameraUpdater fov={apiSettings.fov || 75} />
-          <VoxelWorld />
+          <VoxelWorld version={selectedVersion} />
         </Canvas>
 
         {/* Loading Overlay for Session Switching */}
