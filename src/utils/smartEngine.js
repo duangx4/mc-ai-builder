@@ -160,16 +160,40 @@ export function parseBuildingPlan(text) {
     globalNotes: plan.globalNotes || '',
     sections: plan.sections || { groundY: 0, heightLine: 8 }
   };
-  
-  // 验证 blocks 结构（如果有的话）
-  if (normalizedPlan.blocks.length > 0) {
-    for (const block of normalizedPlan.blocks) {
-      if (!block.id || !block.name) {
-        return { ok: false, reason: 'Block missing required fields (id, name)' };
-      }
-    }
+
+  // blocks 不是数组时的容错处理
+  if (!Array.isArray(normalizedPlan.blocks)) {
+    console.warn('[parseBuildingPlan] blocks 不是数组，归一化为空数组');
+    normalizedPlan.blocks = [];
   }
-  
+
+  // 归一化 blocks 元素字段（自动补齐缺失字段）
+  if (normalizedPlan.blocks.length > 0) {
+    normalizedPlan.blocks = normalizedPlan.blocks.map((block, index) => {
+      const normalized = { ...block };
+
+      // 补齐 id
+      if (!normalized.id) {
+        normalized.id = `b${index}`;
+        console.warn(`[parseBuildingPlan] 已补齐字段: blocks[${index}].id = "${normalized.id}"`);
+      }
+
+      // 补齐 name
+      if (!normalized.name) {
+        normalized.name = normalized.id || `Part ${index}`;
+        console.warn(`[parseBuildingPlan] 已补齐字段: blocks[${index}].name = "${normalized.name}"`);
+      }
+
+      // 补齐 size
+      if (!Array.isArray(normalized.size)) {
+        normalized.size = [10, 10, 10];
+        console.warn(`[parseBuildingPlan] 已补齐字段: blocks[${index}].size = [10, 10, 10]`);
+      }
+
+      return normalized;
+    });
+  }
+
   return { ok: true, plan: normalizedPlan };
 }
 
@@ -469,6 +493,16 @@ export async function generateWithSmartEngine(config) {
       ? `请先阅读相关技能文档（如 knowledge-skill），然后制定详细的构建计划。
 
 输出格式要求（JSON）:
+
+**blocks 数组元素字段要求（严格遵循）：**
+- "id": 英文小写短标识符，如 "main_hall"、"left_wing"（必填，唯一）
+- "name": 中文或英文显示名，如 "正殿"（必填）
+- "size": [宽, 高, 深]，三个正整数（必填）
+- "materials": 主要材料中文名数组（选填）
+- "notes": 该区块备注（选填）
+
+**输出前逐项检查每个 block 是否都有 id 和 name，缺失会让整个规划作废。**
+
 \`\`\`json
 {
   "style": "建筑风格名称",
@@ -504,6 +538,12 @@ export async function generateWithSmartEngine(config) {
       plan = parseResult.plan;
       callbacks.onPlan?.(plan);
       callbacks.onStatus?.(`规划完成: ${plan.summary}`);
+
+      // 规划成功日志
+      console.log('[SmartEngine] Plan parsed:', {
+        blockCount: plan.blocks.length,
+        blocks: plan.blocks.map(b => ({ id: b.id, name: b.name, size: b.size }))
+      });
 
       // 检查是否需要分区构建
       const shouldPartition = settings.smartPartition !== false &&

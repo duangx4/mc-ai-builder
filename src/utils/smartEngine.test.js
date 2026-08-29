@@ -153,14 +153,17 @@ describe('SmartEngine - BuildingPlan Parser', () => {
     expect(result.reason).toContain('JSON parse error');
   });
 
-  it('应该拒绝 blocks 缺少必需字段', () => {
+  it('应该拒绝 blocks 缺少必需字段（现已改为宽容补齐）', () => {
     const json = JSON.stringify({
       style: 'test',
-      blocks: [{ name: 'Hall' }] // 缺少 id
+      blocks: [{ name: 'Hall' }] // 缺少 id 和 size
     });
     const result = parseBuildingPlan(json);
-    expect(result.ok).toBe(false);
-    expect(result.reason).toContain('Block missing required fields');
+    // 新的宽容化逻辑：自动补齐缺失字段，不再拒绝
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].id).toBe('b0'); // 自动补充的 id
+    expect(result.plan.blocks[0].name).toBe('Hall');
+    expect(result.plan.blocks[0].size).toEqual([10, 10, 10]); // 自动补充的 size
   });
 
   it('应该接受没有 blocks 的 plan', () => {
@@ -222,5 +225,169 @@ describe('SmartEngine - Main Loop Integration', () => {
     // 缺少 apiKey 应该抛出错误或返回错误
     // 由于实际实现会调用 fetchWithRetry，这里只验证函数存在
     expect(generateWithSmartEngine).toBeDefined();
+  });
+});
+
+describe('SmartEngine - parseBuildingPlan Tolerance Tests', () => {
+  it('完整 JSON（含 id/name）→ ok:true', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        { id: 'main', name: '主体', size: [10, 10, 10] }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].id).toBe('main');
+    expect(result.plan.blocks[0].name).toBe('主体');
+  });
+
+  it('缺 id → ok:true 且自动补 b0 风格 id', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        { name: '主体', size: [10, 10, 10] },
+        { name: '侧翼', size: [8, 8, 8] }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].id).toBe('b0');
+    expect(result.plan.blocks[0].name).toBe('主体');
+    expect(result.plan.blocks[1].id).toBe('b1');
+    expect(result.plan.blocks[1].name).toBe('侧翼');
+  });
+
+  it('缺 name → ok:true 且自动补（用 id）', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        { id: 'main', size: [10, 10, 10] }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].name).toBe('main');
+  });
+
+  it('缺 name 且缺 id → ok:true 且自动补全', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        { size: [10, 10, 10] }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].id).toBe('b0');
+    expect(result.plan.blocks[0].name).toBe('b0');
+  });
+
+  it('缺 size → ok:true 且自动补 [10, 10, 10]', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        { id: 'main', name: '主体' }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].size).toEqual([10, 10, 10]);
+  });
+
+  it('完全无 blocks 字段 → ok:true 空 blocks', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑'
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks).toEqual([]);
+  });
+
+  it('blocks 不是数组 → ok:true 空 blocks', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: 'invalid'
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks).toEqual([]);
+  });
+
+  it('markdown 代码块包裹 → ok:true', () => {
+    const input = `\`\`\`json
+{
+  "style": "中式",
+  "summary": "测试建筑",
+  "blocks": [
+    { "id": "main", "name": "主体", "size": [10, 10, 10] }
+  ]
+}
+\`\`\``;
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].id).toBe('main');
+  });
+
+  it('顶层坏 JSON → ok:false + reason', () => {
+    const input = '{ invalid json }';
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('JSON parse error');
+  });
+
+  it('空输入 → ok:false（新增测试与原有测试重复验证）', () => {
+    const result = parseBuildingPlan('');
+    expect(result.ok).toBe(false);
+  });
+
+  it('保留 materials 和 notes 字段', () => {
+    const input = JSON.stringify({
+      style: '中式',
+      summary: '测试建筑',
+      blocks: [
+        {
+          id: 'main',
+          name: '主体',
+          size: [10, 10, 10],
+          materials: ['木头', '石头'],
+          notes: '这是备注'
+        }
+      ]
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.blocks[0].materials).toEqual(['木头', '石头']);
+    expect(result.plan.blocks[0].notes).toBe('这是备注');
+  });
+
+  it('顶层缺字段 → 用默认值', () => {
+    const input = JSON.stringify({
+      blocks: []
+    });
+
+    const result = parseBuildingPlan(input);
+    expect(result.ok).toBe(true);
+    expect(result.plan.style).toBe('unknown');
+    expect(result.plan.summary).toBe('No summary provided');
+    expect(result.plan.globalNotes).toBe('');
+    expect(result.plan.sections).toEqual({ groundY: 0, heightLine: 8 });
   });
 });
