@@ -2999,7 +2999,7 @@ ${finalCode}
               inputText={inputText}
               onOptimized={(optimizedText) => setInputText(optimizedText)}
               messages={messages}
-              settings={settings}
+              settings={apiSettings}
             />
 
             {/* Image Previews - Above the input */}
