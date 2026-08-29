@@ -408,6 +408,16 @@ function App() {
   const [apiSettings, setApiSettings] = useState(() => {
     // 使用统一的设置 Schema 加载配置（自动迁移旧配置）
     const settings = loadSettings('mc-ai-settings', 'mc-ai-settings');
+    // 本地开发环境变量兜底注入（.env.local，git 忽略不入库；用户手动改设置后覆盖）
+    if (!settings.apiKey && import.meta.env.VITE_AI_API_KEY) {
+      settings.apiKey = import.meta.env.VITE_AI_API_KEY;
+      settings.baseUrl = import.meta.env.VITE_AI_BASE_URL || settings.baseUrl;
+      settings.model = import.meta.env.VITE_AI_MODEL || settings.model;
+      try {
+        localStorage.setItem('mc-ai-settings', JSON.stringify(settings));
+      } catch (e) { /* ignore */ }
+      console.info('[App] 已通过 .env.local 注入 AI 配置（未覆盖已有设置）');
+    }
     // Apply debug mode on initial load
     setAgentDebugMode(settings.debugMode === true);
     return settings;
