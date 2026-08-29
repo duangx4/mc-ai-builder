@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import useStore from '../store/useStore';
 import { TransformControls } from '@react-three/drei';
 import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP } from '../utils/textureMapping';
+import { inferConnections } from '../utils/blockConnections';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
 // 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
@@ -447,17 +448,21 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
     const meshRef = useRef();
     const tempObject = useMemo(() => new THREE.Object3D(), []);
     const material = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
-    
+
     // Check if this is a cross-shaped block
     const shapeType = getBlockShape(blockType);
     const isCross = BLOCK_SHAPES[shapeType]?.isCross;
 
+    // Check if this is a fence or wall (need special rendering)
+    const isFence = blockType.includes('_fence') && !blockType.includes('fence_gate');
+    const isWall = blockType.includes('_wall') && !blockType.startsWith('wall_');
+
     useEffect(() => {
         if (!meshRef.current || blocks.length === 0) return;
 
-        blocks.forEach((block, i) => {
-            const shape = BLOCK_SHAPES[getBlockShape(block.type)];
+        const shape = BLOCK_SHAPES[getBlockShape(blockType)];
 
+        blocks.forEach((block, i) => {
             tempObject.position.set(
                 block.position[0] + 0.5 + shape.offset[0],
                 block.position[1] + 0.5 + shape.offset[1],
@@ -469,7 +474,7 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
         });
 
         meshRef.current.instanceMatrix.needsUpdate = true;
-    }, [blocks, tempObject]);
+    }, [blocks, tempObject, blockType]);
 
     // Handle click on instanced mesh
     const handleClick = (event) => {
@@ -481,14 +486,26 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
     };
 
     if (blocks.length === 0) return null;
-    
+
     // For cross-shaped blocks, render as individual CrossBlocks for now
     // (instanced cross rendering is complex and would require custom shaders)
     if (isCross) {
         return (
-            <CrossInstancedBlocks 
-                blocks={blocks} 
-                blockType={blockType} 
+            <CrossInstancedBlocks
+                blocks={blocks}
+                blockType={blockType}
+                onBlockClick={onBlockClick}
+                version={version}
+            />
+        );
+    }
+
+    // For fence/wall blocks, render with connection logic
+    if (isFence || isWall) {
+        return (
+            <FenceWallInstancedBlocks
+                blocks={blocks}
+                blockType={blockType}
                 onBlockClick={onBlockClick}
                 version={version}
             />
@@ -507,6 +524,165 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
         >
             <boxGeometry args={[1, 1, 1]} />
         </instancedMesh>
+    );
+}
+
+/**
+ * FenceWallInstancedBlocks - 渲染栅栏/墙方块（带连接推断）
+ * 使用 3 个 instancedMesh 组合：柱（所有）+ NS 横杆（连接 n/s）+ EW 横杆（连接 e/w）
+ */
+function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
+    const pillarMeshRef = useRef();
+    const nsBarMeshRef = useRef();
+    const ewBarMeshRef = useRef();
+    const tempObject = useMemo(() => new THREE.Object3D(), []);
+    const material = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
+
+    // 推断连接状态
+    const connections = useMemo(() => inferConnections(blocks), [blocks]);
+
+    const isFence = blockType.includes('_fence');
+    const isWall = blockType.includes('_wall');
+
+    // 尺寸配置
+    const pillarSize = isFence ? [0.1875, 1, 0.1875] : [0.5, 1, 0.5];
+    const barSize = isFence ? [1, 0.1875, 0.1875] : [1, 0.5, 0.5]; // 横杆沿 X
+    const barYOffset = isFence ? 0.375 : 0; // fence 横杆 Y 偏移
+
+    useEffect(() => {
+        if (blocks.length === 0) return;
+
+        // 收集有连接的实例
+        const nsBlocks = [];
+        const ewBlocks = [];
+
+        blocks.forEach((block) => {
+            const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+            const conn = connections.get(key);
+
+            if (conn) {
+                if (conn.n || conn.s) nsBlocks.push(block);
+                if (conn.e || conn.w) ewBlocks.push(block);
+            }
+        });
+
+        // 1. 渲染所有柱子
+        if (pillarMeshRef.current) {
+            blocks.forEach((block, i) => {
+                tempObject.position.set(
+                    block.position[0] + 0.5,
+                    block.position[1] + 0.5,
+                    block.position[2] + 0.5
+                );
+                tempObject.scale.set(...pillarSize);
+                tempObject.updateMatrix();
+                pillarMeshRef.current.setMatrixAt(i, tempObject.matrix);
+            });
+            pillarMeshRef.current.instanceMatrix.needsUpdate = true;
+        }
+
+        // 2. 渲染 NS 横杆（沿 Z 方向）
+        if (nsBarMeshRef.current && nsBlocks.length > 0) {
+            nsBlocks.forEach((block, i) => {
+                tempObject.position.set(
+                    block.position[0] + 0.5,
+                    block.position[1] + 0.5 + barYOffset,
+                    block.position[2] + 0.5
+                );
+                // 沿 Z 方向：旋转 90 度
+                tempObject.rotation.set(0, Math.PI / 2, 0);
+                tempObject.scale.set(...barSize);
+                tempObject.updateMatrix();
+                nsBarMeshRef.current.setMatrixAt(i, tempObject.matrix);
+            });
+            nsBarMeshRef.current.instanceMatrix.needsUpdate = true;
+        }
+
+        // 3. 渲染 EW 横杆（沿 X 方向）
+        if (ewBarMeshRef.current && ewBlocks.length > 0) {
+            ewBlocks.forEach((block, i) => {
+                tempObject.position.set(
+                    block.position[0] + 0.5,
+                    block.position[1] + 0.5 + barYOffset,
+                    block.position[2] + 0.5
+                );
+                tempObject.rotation.set(0, 0, 0);
+                tempObject.scale.set(...barSize);
+                tempObject.updateMatrix();
+                ewBarMeshRef.current.setMatrixAt(i, tempObject.matrix);
+            });
+            ewBarMeshRef.current.instanceMatrix.needsUpdate = true;
+        }
+    }, [blocks, connections, tempObject, pillarSize, barSize, barYOffset]);
+
+    const handleClick = (event) => {
+        event.stopPropagation();
+        const instanceId = event.instanceId;
+        if (instanceId !== undefined && blocks[instanceId]) {
+            onBlockClick(blocks[instanceId].id, event);
+        }
+    };
+
+    if (blocks.length === 0) return null;
+
+    // 收集有连接的实例数量
+    const nsCount = blocks.filter(block => {
+        const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+        const conn = connections.get(key);
+        return conn && (conn.n || conn.s);
+    }).length;
+
+    const ewCount = blocks.filter(block => {
+        const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+        const conn = connections.get(key);
+        return conn && (conn.e || conn.w);
+    }).length;
+
+    return (
+        <group>
+            {/* 柱子（所有实例） */}
+            <instancedMesh
+                ref={pillarMeshRef}
+                args={[null, null, blocks.length]}
+                material={material}
+                onClick={handleClick}
+                frustumCulled={true}
+                castShadow
+                receiveShadow
+            >
+                <boxGeometry args={[1, 1, 1]} />
+            </instancedMesh>
+
+            {/* NS 横杆（有 n/s 连接的实例） */}
+            {nsCount > 0 && (
+                <instancedMesh
+                    ref={nsBarMeshRef}
+                    args={[null, null, nsCount]}
+                    material={material}
+                    onClick={handleClick}
+                    frustumCulled={true}
+                    castShadow
+                    receiveShadow
+                >
+                    <boxGeometry args={[1, 1, 1]} />
+                </instancedMesh>
+            )}
+
+            {/* EW 横杆（有 e/w 连接的实例） */}
+            {ewCount > 0 && (
+                <instancedMesh
+                    ref={ewBarMeshRef}
+                    args={[null, null, ewCount]}
+                    material={material}
+                    onClick={handleClick}
+                    frustumCulled={true}
+                    castShadow
+                    receiveShadow
+                >
+                    <boxGeometry args={[1, 1, 1]} />
+                </instancedMesh>
+            )}
+        </group>
     );
 }
 
