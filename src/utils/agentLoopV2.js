@@ -334,7 +334,7 @@ async function fetchWithStream(url, options, callbacks, signal) {
 // EMBEDDED SKILL DOCUMENTS (for browser compatibility)
 // ============================================================
 
-const SKILLS_DATABASE = {
+export const SKILLS_DATABASE = {
     'knowledge-skill': {
         name: 'knowledge-skill',
         description: 'Search and retrieve architectural style knowledge. Use this FIRST when building anything new. Read the specific style document that matches the user\'s request.',
@@ -969,7 +969,7 @@ async function fetchSkillFiles(skillName) {
     return [];
 }
 
-const AGENT_TOOLS_V2 = {
+export const AGENT_TOOLS_V2 = {
     read_skill: {
         name: "read_skill",
         description: "Read a skill's documentation and get list of available sub-documents",
@@ -1575,7 +1575,7 @@ const AGENT_TOOLS_V2 = {
  * Get tools schema for API
  * @param {Array} enabledTools - Optional list of enabled tool IDs
  */
-function getToolsSchemaV2(enabledTools = null) {
+export function getToolsSchemaV2(enabledTools = null) {
     const tools = Object.values(AGENT_TOOLS_V2);
     const filteredTools = enabledTools 
         ? tools.filter(tool => enabledTools.includes(tool.name))
@@ -1594,7 +1594,7 @@ function getToolsSchemaV2(enabledTools = null) {
 /**
  * Execute a tool
  */
-async function executeToolV2(toolName, args, context) {
+export async function executeToolV2(toolName, args, context) {
     const tool = AGENT_TOOLS_V2[toolName];
     if (!tool) {
         return { success: false, error: `Unknown tool: ${toolName}` };

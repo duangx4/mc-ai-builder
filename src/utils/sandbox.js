@@ -14,7 +14,7 @@
  *       循环内/块级作用域的 const 都有缩进，不在此范围，不误删。
  *       对无重复的代码是 no-op，不改变任何行为。
  */
-function dedupeTopLevelConsts(code) {
+export function dedupeTopLevelConsts(code) {
     if (typeof code !== 'string' || !code.includes('builder.')) return code;
 
     const RE = /^const\s+([A-Za-z_$][\w$]*)\s*=/;
