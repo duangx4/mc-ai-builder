@@ -1242,6 +1242,249 @@ class VoxelBuilder {
         this.drawEllipsoid(x, y, z, radius, radius, radius, type, options);
     }
 
+    // ============================================================
+    // SDF 曲面原语 (P3-① SDF Surface Voxelization Primitives)
+    // ============================================================
+    // 简化的 SDF 原语，专为建筑曲面设计（穹顶、球形、圆柱、环面）
+    // 全部内部使用 builder.set 保持一致性，返回放置数量
+
+    /**
+     * SDF 球体原语 (Sphere Primitive)
+     * @param {number} cx, cy, cz - 球心坐标
+     * @param {number} radius - 半径
+     * @param {string} block - 方块类型
+     * @param {Object} options - { hollow: boolean, wall: number } - 空心模式和壁厚
+     * @returns {number} - 放置的方块数量
+     */
+    sphere(cx, cy, cz, radius, block, options = {}) {
+        // 参数校验
+        if (typeof radius !== 'number' || radius < 0 || !isFinite(radius)) {
+            throw new Error(`[VoxelBuilder.sphere] Invalid radius: ${radius} (must be non-negative finite number)`);
+        }
+        if (typeof cx !== 'number' || typeof cy !== 'number' || typeof cz !== 'number' ||
+            !isFinite(cx) || !isFinite(cy) || !isFinite(cz)) {
+            throw new Error(`[VoxelBuilder.sphere] Invalid center coordinates: (${cx}, ${cy}, ${cz})`);
+        }
+        // 坐标范围检查
+        if (Math.abs(cx) > 512 || Math.abs(cy) > 512 || Math.abs(cz) > 512) {
+            throw new Error(`[VoxelBuilder.sphere] Center coordinates out of range (±512): (${cx}, ${cy}, ${cz})`);
+        }
+
+        const { hollow = false, wall = 1 } = options;
+        let count = 0;
+
+        const r2 = radius * radius;
+        const innerR2 = hollow ? Math.max(0, radius - wall) ** 2 : -1;
+
+        const range = Math.ceil(radius);
+
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dy = -range; dy <= range; dy++) {
+                for (let dz = -range; dz <= range; dz++) {
+                    const dist2 = dx * dx + dy * dy + dz * dz;
+
+                    // SDF 采样：距球心距离 <= 半径
+                    if (dist2 <= r2) {
+                        if (hollow) {
+                            // 空心模式：仅球壳
+                            if (dist2 > innerR2) {
+                                this.set(cx + dx, cy + dy, cz + dz, block);
+                                count++;
+                            }
+                        } else {
+                            // 实心模式
+                            this.set(cx + dx, cy + dy, cz + dz, block);
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * SDF 穹顶原语 (Dome Primitive)
+     * 半球形穹顶，从底面向上升起
+     * @param {number} cx, cy, cz - 底面中心坐标（穹顶从这里开始）
+     * @param {number} radius - 半径
+     * @param {number} height - 穹顶高度（限制 Y 方向）
+     * @param {string} block - 方块类型
+     * @param {Object} options - { hollow: boolean, wall: number }
+     * @returns {number} - 放置的方块数量
+     */
+    dome(cx, cy, cz, radius, height, block, options = {}) {
+        // 参数校验
+        if (typeof radius !== 'number' || radius < 0 || !isFinite(radius)) {
+            throw new Error(`[VoxelBuilder.dome] Invalid radius: ${radius}`);
+        }
+        if (typeof height !== 'number' || height < 0 || !isFinite(height)) {
+            throw new Error(`[VoxelBuilder.dome] Invalid height: ${height}`);
+        }
+        if (typeof cx !== 'number' || typeof cy !== 'number' || typeof cz !== 'number' ||
+            !isFinite(cx) || !isFinite(cy) || !isFinite(cz)) {
+            throw new Error(`[VoxelBuilder.dome] Invalid center coordinates: (${cx}, ${cy}, ${cz})`);
+        }
+        if (Math.abs(cx) > 512 || Math.abs(cy) > 512 || Math.abs(cz) > 512) {
+            throw new Error(`[VoxelBuilder.dome] Center coordinates out of range (±512): (${cx}, ${cy}, ${cz})`);
+        }
+
+        const { hollow = false, wall = 1 } = options;
+        let count = 0;
+
+        // 球心在底面处，穹顶是上半球（从底面向上延伸）
+        const sphereCenterY = cy;
+        const r2 = radius * radius;
+        const innerR2 = hollow ? Math.max(0, radius - wall) ** 2 : -1;
+
+        const range = Math.ceil(radius);
+        const maxY = Math.min(height, radius); // 最大搜索高度不超过 radius
+
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dy = 0; dy <= maxY; dy++) {
+                for (let dz = -range; dz <= range; dz++) {
+                    const gx = cx + dx;
+                    const gy = cy + dy;
+                    const gz = cz + dz;
+
+                    // 计算到球心的距离（球心在 cy）
+                    const dist2 = dx * dx + dy * dy + dz * dz;
+
+                    if (dist2 <= r2) {
+                        if (hollow) {
+                            if (dist2 > innerR2) {
+                                this.set(gx, gy, gz, block);
+                                count++;
+                            }
+                        } else {
+                            this.set(gx, gy, gz, block);
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * SDF 圆柱原语 (Cylinder Primitive)
+     * 竖直圆柱（Y 轴向）
+     * @param {number} cx, cy0, cz - 底面中心坐标
+     * @param {number} radius - 半径
+     * @param {number} height - 高度
+     * @param {string} block - 方块类型
+     * @param {Object} options - { hollow: boolean, wall: number }
+     * @returns {number} - 放置的方块数量
+     */
+    cylinder(cx, cy0, cz, radius, height, block, options = {}) {
+        // 参数校验
+        if (typeof radius !== 'number' || radius < 0 || !isFinite(radius)) {
+            throw new Error(`[VoxelBuilder.cylinder] Invalid radius: ${radius}`);
+        }
+        if (typeof height !== 'number' || height < 0 || !isFinite(height)) {
+            throw new Error(`[VoxelBuilder.cylinder] Invalid height: ${height}`);
+        }
+        if (typeof cx !== 'number' || typeof cy0 !== 'number' || typeof cz !== 'number' ||
+            !isFinite(cx) || !isFinite(cy0) || !isFinite(cz)) {
+            throw new Error(`[VoxelBuilder.cylinder] Invalid center coordinates: (${cx}, ${cy0}, ${cz})`);
+        }
+        if (Math.abs(cx) > 512 || Math.abs(cy0) > 512 || Math.abs(cz) > 512) {
+            throw new Error(`[VoxelBuilder.cylinder] Center coordinates out of range (±512): (${cx}, ${cy0}, ${cz})`);
+        }
+
+        const { hollow = false, wall = 1 } = options;
+        let count = 0;
+
+        const r2 = radius * radius;
+        const innerR2 = hollow ? Math.max(0, radius - wall) ** 2 : -1;
+
+        const range = Math.ceil(radius);
+
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dz = -range; dz <= range; dz++) {
+                const dist2 = dx * dx + dz * dz;
+
+                // 圆柱 SDF：XZ 平面上的圆形
+                if (dist2 <= r2) {
+                    const shouldPlace = hollow ? (dist2 > innerR2) : true;
+
+                    if (shouldPlace) {
+                        for (let y = cy0; y < cy0 + height; y++) {
+                            this.set(cx + dx, y, cz + dz, block);
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * SDF 环面原语 (Torus Primitive)
+     * 甜甜圈形状
+     * @param {number} cx, cy, cz - 环面中心坐标
+     * @param {number} majorR - 主半径（中心到管道中心的距离）
+     * @param {number} minorR - 副半径（管道粗细）
+     * @param {string} block - 方块类型
+     * @param {Object} options - { orientation: 'horizontal'|'vertical' }
+     * @returns {number} - 放置的方块数量
+     */
+    torus(cx, cy, cz, majorR, minorR, block, options = {}) {
+        // 参数校验
+        if (typeof majorR !== 'number' || majorR < 0 || !isFinite(majorR)) {
+            throw new Error(`[VoxelBuilder.torus] Invalid majorR: ${majorR}`);
+        }
+        if (typeof minorR !== 'number' || minorR < 0 || !isFinite(minorR)) {
+            throw new Error(`[VoxelBuilder.torus] Invalid minorR: ${minorR}`);
+        }
+        if (typeof cx !== 'number' || typeof cy !== 'number' || typeof cz !== 'number' ||
+            !isFinite(cx) || !isFinite(cy) || !isFinite(cz)) {
+            throw new Error(`[VoxelBuilder.torus] Invalid center coordinates: (${cx}, ${cy}, ${cz})`);
+        }
+        if (Math.abs(cx) > 512 || Math.abs(cy) > 512 || Math.abs(cz) > 512) {
+            throw new Error(`[VoxelBuilder.torus] Center coordinates out of range (±512): (${cx}, ${cy}, ${cz})`);
+        }
+
+        const { orientation = 'horizontal' } = options;
+        let count = 0;
+
+        const totalR = majorR + minorR + 1;
+        const minorR2 = minorR * minorR;
+
+        const range = Math.ceil(totalR);
+
+        for (let dx = -range; dx <= range; dx++) {
+            for (let dy = -range; dy <= range; dy++) {
+                for (let dz = -range; dz <= range; dz++) {
+                    let distToRingCenter, tubeAxisDist;
+
+                    if (orientation === 'horizontal') {
+                        // 环在 XZ 平面，Y 轴向上
+                        distToRingCenter = Math.sqrt(dx * dx + dz * dz) - majorR;
+                        tubeAxisDist = distToRingCenter * distToRingCenter + dy * dy;
+                    } else {
+                        // vertical: 环在 XY 平面，Z 轴向前
+                        distToRingCenter = Math.sqrt(dx * dx + dy * dy) - majorR;
+                        tubeAxisDist = distToRingCenter * distToRingCenter + dz * dz;
+                    }
+
+                    // 环面 SDF：管道到中心环的距离
+                    if (tubeAxisDist <= minorR2) {
+                        this.set(cx + dx, cy + dy, cz + dz, block);
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
     /**
      * Draw a Torus (Donut)
      * @param {number} x, y, z - Center
