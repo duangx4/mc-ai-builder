@@ -2,6 +2,14 @@
 
 本文件给 Claude Code / OpenClaw 等 AI agent 提供本仓库工作指引。
 
+## 交付目标（2026-08-29 用户拍板）
+
+**P3 彻底完工 + 全部测试通过后，发布正式版到 GitHub fork：`https://github.com/duangx4/mc-ai-builder`（origin，GPL-3.0 保留原作者信息）**
+
+- remote：`origin` = 自己的 fork（push 目标）；`upstream` = Justcnds/mc-ai-builder（原仓库，pull 参考）。
+- ⚠ 历史结构：本地 v2 是独立根提交（23db40f，tarball 快照），与 fork 的 3 提交历史（e220a68c→b5756f2）**无共同祖先**；树内容基本一致（差异仅 8/26 GBK 文档名修复）。发布时策略：`git rebase --onto <fork基线> 23db40f HEAD` 把本地历史嫁接到 fork 之上（干净线性历史）再 push；push 前复核代理（git http.proxy=127.0.0.1:7892，2026-08-27 记录）。
+- 发布前自查清单：GPL-3.0 保留原作者信息；素材许可兼容（CC0/CC-BY 标注）；README 更新；打包链缺口评估项（见 docs/lint-debt.md）至少打包链跑通；默认版本 1.20.1（用户主玩）。
+
 ## 项目本质
 
 **MC AI Builder** — 用自然语言生成 Minecraft 建筑的 AI 工具（用户描述 → AI 按技能流程生成 VoxelBuilder JS 代码 → 3D 预览 → 多格式导出 WorldEdit/Litematica/Axiom/数据包/单指令）。
