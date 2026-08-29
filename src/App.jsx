@@ -2911,7 +2911,7 @@ ${finalCode}
         <div className="p-5 border-t border-white/5 bg-neutral-900/30 backdrop-blur-lg">
           {/* Mode Toggle */}
           {/* Mode Toggle Groups */}
-          <div className="flex justify-center mb-3 items-center gap-3">
+          <div className="flex flex-wrap justify-center mb-3 items-center gap-3">
             {/* Group 1: Visualization Mode */}
             <div className="bg-neutral-900/80 p-1 rounded-lg flex border border-white/10 shadow-sm">
               <button
