@@ -842,24 +842,61 @@ function App() {
     const variantId = `variant-${variantIndex}`;
     const { updateVariant } = useStore.getState();
 
+    // 工具调用计数器（用于生成唯一 ID）
+    let toolCallCounter = 0;
+
     try {
       updateVariant(variantId, { status: 'generating' });
 
-      // 智能引擎回调
+      // 智能引擎回调 - 映射为 agentSteps 动态步骤流
       const callbacks = {
         onPhaseChange: (phase, reason) => {
           console.log(`[SmartEngine] Phase: ${phase} (${reason})`);
-          // 更新状态显示（可以显示在 UI 上）
-          const phaseLabels = {
-            planning: '🎯 规划中',
-            construction: '🏗️ 构建中',
-            validation: '✅ 验证中',
-            refinement: '🔧 修复中',
-            done: '✨ 完成'
-          };
+
+          // 更新 agentSteps：完成当前 running 步骤，添加新阶段步骤
+          setAgentSteps(prev => {
+            // 将所有 running 步骤标记为 done
+            const updatedSteps = prev.map(s =>
+              s.status === 'running' ? { ...s, status: 'done' } : s
+            );
+
+            // 根据阶段添加新步骤
+            if (phase === 'planning') {
+              return [...updatedSteps, {
+                id: 'smart-plan',
+                label: '✨ 规划中：分析需求与风格',
+                status: 'running'
+              }];
+            } else if (phase === 'construction') {
+              return [...updatedSteps, {
+                id: 'smart-build',
+                label: '🏗️ 构建中：生成建筑代码',
+                status: 'running'
+              }];
+            } else if (phase === 'validation') {
+              return [...updatedSteps, {
+                id: 'smart-validate',
+                label: '✅ 验证中：检查代码与方块',
+                status: 'running'
+              }];
+            } else if (phase === 'refinement') {
+              const reasonLabel = reason ? `：${reason}` : '';
+              return [...updatedSteps, {
+                id: 'smart-refine',
+                label: `🔧 优化中：修复问题${reasonLabel}`,
+                status: 'running'
+              }];
+            } else if (phase === 'done') {
+              // 完成所有步骤
+              return updatedSteps;
+            }
+
+            return updatedSteps;
+          });
+
           updateVariant(variantId, {
             currentPhase: phase,
-            phaseLabel: phaseLabels[phase] || phase
+            phaseLabel: phase
           });
         },
         onChunk: (chunk, accumulated) => {
@@ -867,23 +904,124 @@ function App() {
         },
         onStatus: (message) => {
           console.log(`[SmartEngine] ${message}`);
+
+          // 更新当前 running 步骤的标签或添加详细信息
+          setAgentSteps(prev => {
+            const lastRunning = prev.findIndex(s => s.status === 'running');
+            if (lastRunning === -1) return prev;
+
+            const step = prev[lastRunning];
+            const newSteps = [...prev];
+
+            // 根据状态消息更新步骤标签
+            if (message.includes('分区规划完成')) {
+              // 提取分区数量
+              const match = message.match(/(\d+)\s*个任务/);
+              if (match) {
+                newSteps[lastRunning] = {
+                  ...step,
+                  label: `${step.label.split('：')[0]}：分区规划完成 (${match[1]} 个任务)`
+                };
+              }
+            } else if (message.includes('区块完成')) {
+              // 更新构建进度
+              const match = message.match(/\((\d+)\/(\d+)\)/);
+              if (match) {
+                newSteps[lastRunning] = {
+                  ...step,
+                  label: `🏗️ 构建中：区块进度 ${match[1]}/${match[2]}`
+                };
+              }
+            } else if (message.includes('生成') && message.includes('个方块')) {
+              // 提取方块数量用于完成摘要
+              const match = message.match(/(\d+)\s*个方块/);
+              if (match) {
+                newSteps[lastRunning] = {
+                  ...step,
+                  label: `✅ 验证通过：生成 ${match[1]} 个方块`
+                };
+              }
+            }
+
+            return newSteps;
+          });
         },
         onPlan: (plan) => {
           console.log('[SmartEngine] Plan:', plan);
-          // 可以存储 plan 到 variant 中用于显示
           updateVariant(variantId, { plan });
 
-          // 显示分区信息（如果启用了分区构建）
+          // 更新规划步骤为完成，并设置 Blueprint
+          setAgentSteps(prev => {
+            return prev.map(s => {
+              if (s.id === 'smart-plan' && s.status === 'running') {
+                // 构建规划摘要
+                const summary = [];
+                if (plan.style) summary.push(plan.style);
+                if (plan.summary) summary.push(plan.summary);
+                if (plan.estimatedBlocks) summary.push(`约 ${plan.estimatedBlocks} 个方块`);
+                if (plan.partitioned) summary.push(`分区构建 (${plan.partitionCount} 区)`);
+
+                const label = summary.length > 0
+                  ? `✨ 规划完成：${summary.join(' · ')}`
+                  : '✨ 规划完成';
+
+                return { ...s, label, status: 'done' };
+              }
+              return s;
+            });
+          });
+
+          // 设置 Blueprint 卡片（复用现有机制）
+          if (plan.style || plan.dimensions) {
+            setCurrentBlueprint({
+              style: plan.style || '智能构建',
+              dimensions: plan.dimensions || (plan.estimatedBlocks ? `~${plan.estimatedBlocks} blocks` : 'Auto')
+            });
+          }
+
+          // 显示分区信息
           if (plan.partitioned && plan.partitionCount) {
             const partitionMsg = `🔀 分区构建模式：${plan.partitionCount} 个区块，深度 ${plan.treeDepth || 0}`;
-            updateVariant(variantId, {
-              partitionInfo: partitionMsg
-            });
+            updateVariant(variantId, { partitionInfo: partitionMsg });
             console.log(`[SmartEngine] ${partitionMsg}`);
           }
         },
         onToolCall: (toolName, args, result) => {
           console.log(`[SmartEngine] Tool: ${toolName}`, result);
+
+          // 添加工具调用步骤
+          toolCallCounter++;
+          const toolId = `smart-tool-${toolCallCounter}`;
+
+          // 工具名称映射为友好标签
+          const toolLabels = {
+            'read_skill': '📖 调用 read_skill：文档阅读',
+            'read_subdoc': '📑 调用 read_subdoc：子文档查询',
+            'validate_blocks': '🔍 调用 validate_blocks：方块验证',
+            'default': `🔧 调用 ${toolName}`
+          };
+          const toolLabel = toolLabels[toolName] || toolLabels['default'];
+
+          // 判断工具调用是否成功
+          const isSuccess = result && !result.error;
+          const status = isSuccess ? 'done' : 'error';
+
+          setAgentSteps(prev => [...prev, {
+            id: toolId,
+            label: toolLabel,
+            status: status,
+            details: result ? [{
+              type: 'start',
+              toolName: toolName,
+              iteration: toolCallCounter,
+              args: args
+            }, {
+              type: 'result',
+              toolName: toolName,
+              iteration: toolCallCounter,
+              result: result
+            }] : undefined
+          }]);
         }
       };
 
@@ -1689,7 +1827,9 @@ function App() {
             generationMode: 'smart'
           }]);
           startConcurrentGeneration(messageId, 1, 'smart');
+          // 初始化 agentSteps 并自动展开工作流卡片
           setAgentSteps([{ id: 'smart-init', label: '✨ 智能构建引擎启动', status: 'done' }]);
+          setIsWorkflowCollapsed(false); // 自动展开工作流以显示实时步骤
 
           // Dev Console: Log Smart mode start
           if (apiSettings.debugMode) {
@@ -2425,9 +2565,32 @@ ${finalCode}
                             // Check if this message has a script (either embedded or via hasScript flag)
                             const hasCodeBlock = contentStr.match(/```[\s\S]*?```/);
                             const hasScriptFlag = msg.hasScript;
-                            
+
+                            // 渲染生成模式徽章（AI 消息专用）
+                            const renderModeBadge = () => {
+                              if (msg.role !== 'ai' || !msg.generationMode) return null;
+
+                              const modeConfig = {
+                                fast: { icon: '⚡', label: '快速', colorClass: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+                                workflow: { icon: '📋', label: '自定义', colorClass: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+                                agent: { icon: '📋', label: '自定义', colorClass: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
+                                agentSkills: { icon: '🤖', label: '自主', colorClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
+                                smart: { icon: '✨', label: '智能构建', colorClass: 'bg-green-500/10 text-green-400 border-green-500/20' }
+                              };
+
+                              const config = modeConfig[msg.generationMode] || modeConfig.fast;
+
+                              return (
+                                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono tracking-widest border ${config.colorClass} mb-2`}>
+                                  <span>{config.icon}</span>
+                                  <span>{config.label}</span>
+                                </div>
+                              );
+                            };
+
                             return (
                               <div className="flex flex-col gap-2">
+                                {renderModeBadge()}
                                 <div className="leading-relaxed">
                                   {renderMarkdown(contentStr)}
                                 </div>
