@@ -1927,6 +1927,341 @@ class VoxelBuilder {
     }
 
     /**
+     * 便捷原语：放置台阶方块（带方向属性）
+     * @param {number} x, y, z - 位置
+     * @param {string} type - 台阶类型（如 'oak_stairs'）
+     * @param {string} facing - 方向：'north'|'south'|'east'|'west' 或简写 'n'|'s'|'e'|'w'
+     * @param {string} half - 上下半：'bottom'|'top'（默认 'bottom'）
+     * @returns {void}
+     */
+    stairs(x, y, z, type, facing, half = 'bottom') {
+        // 归一化 facing（支持简写）
+        const facingMap = {
+            'n': 'north', 'north': 'north',
+            's': 'south', 'south': 'south',
+            'e': 'east', 'east': 'east',
+            'w': 'west', 'west': 'west'
+        };
+
+        const normalizedFacing = facingMap[facing?.toLowerCase()];
+        if (!normalizedFacing) {
+            throw new Error(`[builder.stairs] Invalid facing: "${facing}". Must be one of: north/south/east/west/n/s/e/w`);
+        }
+
+        const props = `facing=${normalizedFacing},half=${half}`;
+        this.set(x, y, z, `${type}?${props}`);
+    }
+
+    /**
+     * 便捷原语：放置半砖方块（带上下半属性）
+     * @param {number} x, y, z - 位置
+     * @param {string} type - 半砖类型（如 'oak_slab'）
+     * @param {string} half - 上下半：'bottom'|'top'（默认 'bottom'）
+     * @returns {void}
+     */
+    slab(x, y, z, type, half = 'bottom') {
+        const props = `half=${half}`;
+        this.set(x, y, z, `${type}?${props}`);
+    }
+
+    /**
+     * 屋顶生成器（系统级）
+     * 生成 gable（双坡）/ hip（四坡）/ pyramid（攒尖）三种屋顶样式
+     * 方向由算法统一计算，保证同层同侧 facing 一致
+     *
+     * @param {number} x0, z0, x1, z1 - 屋顶外框矩形（含挑檐后）
+     * @param {Object} options - 配置选项
+     *   - style: 'gable'（双坡，默认）| 'hip'（四坡庑殿）| 'pyramid'（攒尖方锥）
+     *   - material: 瓦片材质（默认 'gray_concrete'）
+     *   - frame: 檩条/屋脊材质（默认 'dark_oak_planks'）
+     *   - baseY: 屋顶底面 y（默认自动检测：扫描区域内最高非 AIR 块的 y+1）
+     *   - eaves: 挑出格数（默认 0）
+     *   - slope: 坡度步进（默认 1，即 45°，每升高 1 层水平内收 1 格）
+     * @returns {number} - 放置的方块总数
+     */
+    roof(x0, z0, x1, z1, options = {}) {
+        // 参数归一化（保证 x0<=x1, z0<=z1）
+        const minX = Math.min(x0, x1);
+        const maxX = Math.max(x0, x1);
+        const minZ = Math.min(z0, z1);
+        const maxZ = Math.max(z0, z1);
+
+        // 参数校验
+        if (minX === maxX || minZ === maxZ) {
+            throw new Error(`[builder.roof] Invalid region: must be at least 2x2 (got ${maxX - minX + 1}x${maxZ - minZ + 1})`);
+        }
+
+        const {
+            style = 'gable',
+            material = 'gray_concrete',
+            frame = 'dark_oak_planks',
+            baseY = null,
+            eaves = 0,
+            slope = 1
+        } = options;
+
+        // 样式校验
+        const validStyles = ['gable', 'hip', 'pyramid'];
+        if (!validStyles.includes(style)) {
+            throw new Error(`[builder.roof] Invalid style: "${style}". Must be one of: ${validStyles.join(', ')}`);
+        }
+
+        // 台阶材质解析：MC 只有部分方块有台阶变体（concrete/terracotta 等无台阶）
+        // 无台阶族的材质 → 统一用灰调石砖台阶作为瓦片泛用
+        const STAIRS_HAVE_VARIANTS = ['stone_brick', 'cobblestone', 'dark_oak', 'oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_prismarine', 'prismarine', 'quartz', 'blackstone', 'polished_blackstone', 'mossy_stone_brick', 'mud_brick', 'sandstone', 'red_sandstone', 'brick', 'end_stone_brick', 'purpur'];
+        const stairsMaterial = (m) => STAIRS_HAVE_VARIANTS.includes(m) ? `${m}_stairs` : 'stone_brick_stairs';
+
+        // 自动检测 baseY（扫描区域内最高非 AIR 块）
+        let actualBaseY = baseY;
+        if (actualBaseY === null) {
+            let maxY = -Infinity;
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    // 向下扫描找第一个非 AIR 块
+                    for (let y = 255; y >= 0; y--) {
+                        const block = this.get(x, y, z);
+                        if (block && block.toLowerCase() !== 'air') {
+                            maxY = Math.max(maxY, y);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (maxY === -Infinity) {
+                throw new Error(`[builder.roof] Cannot auto-detect baseY: no non-AIR blocks found in region (${minX},${minZ}) to (${maxX},${maxZ})`);
+            }
+            actualBaseY = maxY + 1;
+        }
+
+        let count = 0;
+
+        // 区域尺寸
+        const widthX = maxX - minX + 1;
+        const widthZ = maxZ - minZ + 1;
+
+        // === GABLE 双坡 ===
+        if (style === 'gable') {
+            // 屋脊方向 = 较长边方向
+            const ridgeAlongX = widthX >= widthZ; // true: 屋脊沿 X，坡向为 Z；false: 屋脊沿 Z，坡向为 X
+            const slopeSpan = ridgeAlongX ? widthZ : widthX;
+            const ridgeLength = ridgeAlongX ? widthX : widthZ;
+
+            // 层数（坡向跨度 / 2 / slope）
+            const layers = Math.floor(slopeSpan / 2 / slope);
+
+            // 檐口支撑（最底层外圈下方补檩条）
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    // 外圈一圈
+                    if (x === minX || x === maxX || z === minZ || z === maxZ) {
+                        this.set(x, actualBaseY - 1, z, frame);
+                        count++;
+                    }
+                }
+            }
+
+            // 逐层生成
+            for (let i = 0; i < layers; i++) {
+                const y = actualBaseY + i;
+
+                // 计算本层矩形（坡向两端各内收 i * slope 格）
+                let layerMinX = minX;
+                let layerMaxX = maxX;
+                let layerMinZ = minZ;
+                let layerMaxZ = maxZ;
+
+                if (ridgeAlongX) {
+                    // 坡向 Z：南北两侧内收
+                    layerMinZ = minZ + i * slope;
+                    layerMaxZ = maxZ - i * slope;
+                } else {
+                    // 坡向 X：东西两侧内收
+                    layerMinX = minX + i * slope;
+                    layerMaxX = maxX - i * slope;
+                }
+
+                // 层退化检查
+                if (layerMinX > layerMaxX || layerMinZ > layerMaxZ) break;
+
+                // 外圈台阶 + 中间填充
+                for (let x = layerMinX; x <= layerMaxX; x++) {
+                    for (let z = layerMinZ; z <= layerMaxZ; z++) {
+                        const isEdge = (x === layerMinX || x === layerMaxX || z === layerMinZ || z === layerMaxZ);
+
+                        if (isEdge) {
+                            // 外圈台阶：facing 朝坡外侧
+                            let facing = null;
+                            if (ridgeAlongX) {
+                                // 坡向 Z
+                                if (z === layerMinZ) facing = 'north'; // 北边台阶朝北
+                                else if (z === layerMaxZ) facing = 'south'; // 南边台阶朝南
+                                else facing = (x === layerMinX ? 'west' : 'east'); // 东西边角部
+                            } else {
+                                // 坡向 X
+                                if (x === layerMinX) facing = 'west'; // 西边台阶朝西
+                                else if (x === layerMaxX) facing = 'east'; // 东边台阶朝东
+                                else facing = (z === layerMinZ ? 'north' : 'south'); // 南北边角部
+                            }
+                            this.stairs(x, y, z, stairsMaterial(material), facing);
+                            count++;
+                        } else {
+                            // 中间填充实心
+                            this.set(x, y, z, material);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            // 屋脊（最后一层收成一排 frame）
+            const ridgeY = actualBaseY + layers;
+            if (ridgeAlongX) {
+                // 屋脊沿 X 方向
+                const ridgeZ = Math.floor((minZ + maxZ) / 2);
+                for (let x = minX; x <= maxX; x++) {
+                    this.set(x, ridgeY, ridgeZ, frame);
+                    count++;
+                }
+            } else {
+                // 屋脊沿 Z 方向
+                const ridgeX = Math.floor((minX + maxX) / 2);
+                for (let z = minZ; z <= maxZ; z++) {
+                    this.set(ridgeX, ridgeY, z, frame);
+                    count++;
+                }
+            }
+        }
+
+        // === HIP 四坡 ===
+        else if (style === 'hip') {
+            const maxLayers = Math.floor(Math.min(widthX, widthZ) / 2 / slope);
+
+            // 檐口支撑
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    if (x === minX || x === maxX || z === minZ || z === maxZ) {
+                        this.set(x, actualBaseY - 1, z, frame);
+                        count++;
+                    }
+                }
+            }
+
+            // 逐层生成（四边同时内收）
+            for (let i = 0; i < maxLayers; i++) {
+                const y = actualBaseY + i;
+                const layerMinX = minX + i * slope;
+                const layerMaxX = maxX - i * slope;
+                const layerMinZ = minZ + i * slope;
+                const layerMaxZ = maxZ - i * slope;
+
+                if (layerMinX > layerMaxX || layerMinZ > layerMaxZ) break;
+
+                // 外圈台阶
+                for (let x = layerMinX; x <= layerMaxX; x++) {
+                    for (let z = layerMinZ; z <= layerMaxZ; z++) {
+                        const isEdge = (x === layerMinX || x === layerMaxX || z === layerMinZ || z === layerMaxZ);
+
+                        if (isEdge) {
+                            // 四边各自朝外
+                            let facing = null;
+                            if (x === layerMinX) facing = 'west';
+                            else if (x === layerMaxX) facing = 'east';
+                            else if (z === layerMinZ) facing = 'north';
+                            else if (z === layerMaxZ) facing = 'south';
+
+                            this.stairs(x, y, z, stairsMaterial(material), facing);
+                            count++;
+                        } else {
+                            this.set(x, y, z, material);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            // 屋脊（收成一行或一点）
+            const ridgeY = actualBaseY + maxLayers;
+            const ridgeCenterX = Math.floor((minX + maxX) / 2);
+            const ridgeCenterZ = Math.floor((minZ + maxZ) / 2);
+
+            // 沿长边放一排
+            if (widthX > widthZ) {
+                for (let x = ridgeCenterX - 1; x <= ridgeCenterX + 1; x++) {
+                    this.set(x, ridgeY, ridgeCenterZ, frame);
+                    count++;
+                }
+            } else if (widthZ > widthX) {
+                for (let z = ridgeCenterZ - 1; z <= ridgeCenterZ + 1; z++) {
+                    this.set(ridgeCenterX, ridgeY, z, frame);
+                    count++;
+                }
+            } else {
+                // 方形区域：一个点
+                this.set(ridgeCenterX, ridgeY, ridgeCenterZ, frame);
+                count++;
+            }
+        }
+
+        // === PYRAMID 攒尖 ===
+        else if (style === 'pyramid') {
+            const maxLayers = Math.floor(Math.min(widthX, widthZ) / 2 / slope);
+
+            // 檐口支撑
+            for (let x = minX; x <= maxX; x++) {
+                for (let z = minZ; z <= maxZ; z++) {
+                    if (x === minX || x === maxX || z === minZ || z === maxZ) {
+                        this.set(x, actualBaseY - 1, z, frame);
+                        count++;
+                    }
+                }
+            }
+
+            // 逐层生成（与 hip 相同）
+            for (let i = 0; i < maxLayers; i++) {
+                const y = actualBaseY + i;
+                const layerMinX = minX + i * slope;
+                const layerMaxX = maxX - i * slope;
+                const layerMinZ = minZ + i * slope;
+                const layerMaxZ = maxZ - i * slope;
+
+                if (layerMinX > layerMaxX || layerMinZ > layerMaxZ) break;
+
+                for (let x = layerMinX; x <= layerMaxX; x++) {
+                    for (let z = layerMinZ; z <= layerMaxZ; z++) {
+                        const isEdge = (x === layerMinX || x === layerMaxX || z === layerMinZ || z === layerMaxZ);
+
+                        if (isEdge) {
+                            let facing = null;
+                            if (x === layerMinX) facing = 'west';
+                            else if (x === layerMaxX) facing = 'east';
+                            else if (z === layerMinZ) facing = 'north';
+                            else if (z === layerMaxZ) facing = 'south';
+
+                            this.stairs(x, y, z, stairsMaterial(material), facing);
+                            count++;
+                        } else {
+                            this.set(x, y, z, material);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            // 尖顶（收成 1 块 + 宝顶）
+            const peakY = actualBaseY + maxLayers;
+            const peakX = Math.floor((minX + maxX) / 2);
+            const peakZ = Math.floor((minZ + maxZ) / 2);
+
+            this.set(peakX, peakY, peakZ, material);
+            count++;
+            this.set(peakX, peakY + 1, peakZ, frame); // 宝顶
+            count++;
+        }
+
+        return count;
+    }
+
+    /**
      * Draw Spiral Stairs
      * @param {number} x, y, z - Center bottom position
      * @param {number} radius - Radius of the spiral
