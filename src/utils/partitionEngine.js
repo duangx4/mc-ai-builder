@@ -619,9 +619,13 @@ export async function runPartitionedBuild(config) {
     warnings.push(...mergeResult.warnings);
   }
 
-  // 整体验证
+  // 整体验证：无主体代码（合并失败/全部区块失败）时抛出，触发上层 fallback 常规构建
+  // 否则会交付「纯衔接填充代码」= 一整坨实心方块（已实测踩坑：四合院被填成 2139 块石砖）
   if (!mergeResult.valid) {
     warnings.push('合并后的代码验证失败');
+    const err = new Error(`分区构建失败：${mergeResult.warnings.join('; ')}`);
+    callbacks.onStatus?.(`分区构建失败，回退到常规模式: ${err.message}`);
+    throw err;
   }
 
   // 如果有自动生成的衔接填充代码，追加到合并代码后

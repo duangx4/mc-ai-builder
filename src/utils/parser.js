@@ -10,6 +10,9 @@
  * @param {string} text - The raw text input containing block definitions
  * @returns {Array} Array of block objects: { id, position: [x,y,z], type, properties }
  */
+
+// 中文材质名归一化（生成代码常用中文直接写材质，导出的命令必须是英文方块 ID）
+import { CN_MATERIAL_MAP } from './textureMapping.js';
 export const parseAIOutput = (text) => {
     const blocks = [];
     let blockId = 1;
@@ -220,6 +223,9 @@ export const generateCommand = (block) => {
  */
 export const generateStructureCommand = (blocks) => {
     if (!blocks.length) return '';
+
+    // 中文材质名归一化为标准 ID（导出的命令必须是英文方块 ID）
+    blocks = blocks.map(b => ({ ...b, type: CN_MATERIAL_MAP[b.type] || b.type }));
 
     // Group blocks by type+properties to find potential fill regions
     const commands = [];

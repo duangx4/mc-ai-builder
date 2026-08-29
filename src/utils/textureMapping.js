@@ -1126,6 +1126,34 @@ export const FALLBACK_COLORS = {
 };
 
 /**
+ * 中文材质名 → 标准英文 ID 映射
+ * 生成代码（尤其 opus5）常用中文直接写材质（如 \"石砖\"），渲染层必须归一化才能找贴图/颜色
+ */
+export const CN_MATERIAL_MAP = {
+  // 石材
+  '石砖': 'stone_bricks', '石头': 'stone', '圆石': 'cobblestone', '安山岩': 'andesite', '花岗岩': 'granite',
+  '闪长岩': 'diorite', '深板岩': 'deepslate', '深板岩砖': 'deepslate_bricks', '磨制深板岩': 'polished_deepslate',
+  '砂岩': 'sandstone', '红砂岩': 'red_sandstone', '石砖台阶': 'stone_brick_stairs', '苔石': 'mossy_cobblestone',
+  // 木材
+  '深色橡木原木': 'dark_oak_log', '深色橡木': 'dark_oak_log', '深色橡木木板': 'dark_oak_planks', '深色橡木柱': 'dark_oak_log',
+  '橡木原木': 'oak_log', '橡木木板': 'oak_planks', '橡木': 'oak_log', '桦木原木': 'birch_log', '桦木木板': 'birch_planks',
+  '云杉原木': 'spruce_log', '云杉木板': 'spruce_planks', '金合欢原木': 'acacia_log', '丛林木原木': 'jungle_log',
+  '红树木原木': 'mangrove_log', '红树木板': 'mangrove_planks', '木板': 'oak_planks',
+  // 墙面
+  '白色混凝土': 'white_concrete', '白色混凝土墙': 'white_concrete', '白色陶瓦': 'white_terracotta',
+  '混凝土': 'white_concrete', '黑曜石': 'obsidian', '石英块': 'quartz_block', '平滑石英': 'smooth_quartz',
+  // 基础
+  '草方块': 'grass_block', '泥土': 'dirt', '沙': 'sand', '沙子': 'sand', '砾石': 'gravel', '冰': 'ice',
+  '玻璃': 'glass', '玻璃板': 'glass_pane', '书架': 'bookshelf', '灯笼': 'lantern', '萤石': 'glowstone',
+  '海晶灯': 'sea_lantern', '岩浆块': 'magma_block', '荧石': 'glowstone',
+  // 屋顶/瓦
+  '瓦片': 'deepslate_tiles', '灰色瓦片': 'deepslate_tiles', '深灰瓦片': 'deepslate_tiles', '瓦': 'bricks',
+  // 水/叶
+  '水': 'water', '流动的水': 'flowing_water', '树叶': 'oak_leaves', '橡树叶': 'oak_leaves',
+  '深色橡树叶': 'dark_oak_leaves', '树苗': 'oak_sapling'
+};
+
+/**
  * 解析方块纹理（综合别名和分面规则）
  * @param {string} type - 方块类型
  * @param {string} version - MC版本
@@ -1133,9 +1161,11 @@ export const FALLBACK_COLORS = {
  */
 export function resolveBlockTextures(type, version = '1.20.1') {
   const lowerType = type.toLowerCase();
+  // 中文材质名先归一化为标准英文 ID
+  const normalized = CN_MATERIAL_MAP[lowerType] || lowerType;
   
   // 1. 获取分面纹理名
-  const faceTextures = getFaceTextureNames(lowerType);
+  const faceTextures = getFaceTextureNames(normalized);
   
   // 2. 对每个面应用别名映射（如果存在）
   const resolvedSide = BLOCK_TEXTURE_ALIASES[faceTextures.side] || faceTextures.side;
@@ -1143,7 +1173,7 @@ export function resolveBlockTextures(type, version = '1.20.1') {
   const resolvedBottom = BLOCK_TEXTURE_ALIASES[faceTextures.bottom] || faceTextures.bottom;
   
   // 3. 获取兜底颜色
-  const fallbackColor = FALLBACK_COLORS[lowerType] || FALLBACK_COLORS['default'];
+  const fallbackColor = FALLBACK_COLORS[normalized] || FALLBACK_COLORS['default'];
   
   return {
     side: resolvedSide,

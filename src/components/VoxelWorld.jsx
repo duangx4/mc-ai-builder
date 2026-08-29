@@ -5,7 +5,14 @@ import { TextureLoader, NearestFilter } from 'three';
 import * as THREE from 'three';
 import useStore from '../store/useStore';
 import { TransformControls } from '@react-three/drei';
-import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS } from '../utils/textureMapping';
+import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP } from '../utils/textureMapping';
+
+// 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
+// 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
+for (const [cn, en] of Object.entries(CN_MATERIAL_MAP)) {
+  if (!ALIASES[cn] && ALIASES[en]) ALIASES[cn] = ALIASES[en];
+  if (!FALLBACK_COLORS[cn] && FALLBACK_COLORS[en]) FALLBACK_COLORS[cn] = FALLBACK_COLORS[en];
+}
 
 
 // Blocks that should NOT load textures (use fallback colors only)
