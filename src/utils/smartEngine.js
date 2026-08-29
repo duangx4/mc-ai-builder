@@ -13,6 +13,7 @@
  */
 
 import { fetchWithRetry } from './fetchWithRetry.js';
+import { wrapRequest } from './proxyHelper.js';
 import { createSSEParser } from './sseParser.js';
 import { executeVoxelScript, dedupeTopLevelConsts } from './sandbox.js';
 import {
@@ -698,9 +699,10 @@ export async function generateWithSmartEngine(config) {
       requestBody.max_tokens = settings.maxTokens;
     }
 
-    // 发起请求（使用 fetchWithRetry）
-    const response = await fetchWithRetry(
-      `${baseUrl}/chat/completions`,
+    // 发起请求（使用 fetchWithRetry；botcf 等 CORS 受限网关自动走同源代理）
+    const { url: reqUrl, fetchOptions } = wrapRequest(
+      baseUrl,
+      '/chat/completions',
       {
         method: 'POST',
         headers: {
@@ -709,7 +711,11 @@ export async function generateWithSmartEngine(config) {
         },
         body: JSON.stringify(requestBody),
         signal
-      },
+      }
+    );
+    const response = await fetchWithRetry(
+      reqUrl,
+      fetchOptions,
       {
         timeout: settings.timeout || 60000,
         maxRetries: 3
@@ -720,45 +726,48 @@ export async function generateWithSmartEngine(config) {
       throw new Error(`HTTP ${response.status}: ${await response.text()}`);
     }
 
-    // 解析流式响应
-    const parser = createSSEParser();
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
+    // 解析流式响应（createSSEParser 回调式，支持跨包缓冲）
     let accumulatedContent = '';
     let accumulatedToolCalls = [];
     let codeGenerated = false;
+
+    const parser = createSSEParser((data) => {
+      const delta = data.choices?.[0]?.delta;
+      if (!delta) return;
+
+      if (delta.content) {
+        accumulatedContent += delta.content;
+        callbacks.onChunk?.(delta.content, accumulatedContent);
+      }
+
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index ?? 0;
+          if (!accumulatedToolCalls[idx]) {
+            accumulatedToolCalls[idx] = {
+              id: tc.id || `call_${Date.now()}_${idx}`,
+              type: 'function',
+              function: { name: '', arguments: '' }
+            };
+          }
+          if (tc.function?.name) {
+            accumulatedToolCalls[idx].function.name = tc.function.name;
+          }
+          if (tc.function?.arguments) {
+            accumulatedToolCalls[idx].function.arguments += tc.function.arguments;
+          }
+        }
+      }
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const events = parser.parse(chunk);
-
-        for (const event of events) {
-          if (event.type === 'content') {
-            accumulatedContent += event.data;
-            callbacks.onChunk?.(event.data, accumulatedContent);
-          } else if (event.type === 'tool_call') {
-            // 累积工具调用
-            const idx = event.index;
-            if (!accumulatedToolCalls[idx]) {
-              accumulatedToolCalls[idx] = {
-                id: event.id || `call_${Date.now()}_${idx}`,
-                type: 'function',
-                function: { name: event.name || '', arguments: '' }
-              };
-            }
-            if (event.name) {
-              accumulatedToolCalls[idx].function.name = event.name;
-            }
-            if (event.arguments) {
-              accumulatedToolCalls[idx].function.arguments += event.arguments;
-            }
-          }
-        }
+        parser.feed(decoder.decode(value, { stream: true }));
       }
     } finally {
       reader.releaseLock();

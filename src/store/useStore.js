@@ -1108,6 +1108,12 @@ const useStore = create(
             switchSession: async (sessionId) => {
                 const state = get();
 
+                // 净化：过滤 position 无效的 blocks（历史 bug 会存下 null 坐标，导致 3D 场景空）
+                const sanitizeBlocks = (blocks) => (blocks || []).filter(b =>
+                    b && Array.isArray(b.position) && b.position.length >= 3 &&
+                    b.position.every(n => typeof n === 'number' && Number.isFinite(n))
+                );
+
                 // Save current session's snapshots and API conversation before switching
                 if (state.currentSessionId && state.currentSessionId !== sessionId) {
                     // Update sessions array with current snapshots and API conversation
@@ -1166,8 +1172,8 @@ const useStore = create(
                         set({
                             currentSessionId: sessionId,
                             currentMessages: messages,
-                            blocks,
-                            semanticVoxels,
+                            blocks: sanitizeBlocks(blocks),
+                            semanticVoxels: sanitizeBlocks(semanticVoxels).map(v => ({ ...v, position: v.position || [] })),
                             // Load session's undo/redo history
                             chatSnapshots: remoteSession.chatSnapshots || [],
                             snapshotIndex: remoteSession.snapshotIndex ?? -1,
@@ -1196,8 +1202,8 @@ const useStore = create(
                     set({
                         currentSessionId: sessionId,
                         currentMessages: messages,
-                        blocks,
-                        semanticVoxels,
+                        blocks: sanitizeBlocks(blocks),
+                        semanticVoxels: sanitizeBlocks(semanticVoxels).map(v => ({ ...v, position: v.position || [] })),
                         // Load session's undo/redo history
                         chatSnapshots: session.chatSnapshots || [],
                         snapshotIndex: session.snapshotIndex ?? -1,

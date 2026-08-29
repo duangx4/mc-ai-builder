@@ -836,7 +836,8 @@ function App() {
    * Smart 模式生成（使用智能构建引擎）
    */
   const generateVariantSmart = async (userMessage, variantIndex, signal, currentCode = null, imageUrl = null) => {
-    const variantId = `v${variantIndex}`;
+    const variantId = `variant-${variantIndex}`;
+    const { updateVariant } = useStore.getState();
 
     try {
       updateVariant(variantId, { status: 'generating' });
@@ -908,7 +909,7 @@ function App() {
       // 转换为 blocks 格式
       const newBlocks = voxels.map((v, i) => ({
         id: `${Date.now()}-${i}`,
-        position: [v.x, v.y, v.z],
+        position: v.position ? [v.position[0], v.position[1], v.position[2]] : [0, 0, 0],
         type: v.type,
         properties: v.properties || {}
       }));
@@ -1669,6 +1670,71 @@ function App() {
           // Auto-switch to fast mode after first generation
           setGenerationMode('fast');
           console.log('[App] Auto-switched to fast mode after Ultimate generation');
+
+        } else if (effectiveMode === 'smart') {
+          // ============ SMART 智能构建（多阶段引擎：规划→构建→验证→优化; 单变体走并发框架） ============
+          const messageId = `msg-${Date.now()}`;
+          const { startConcurrentGeneration, finalizeConcurrentGeneration } = useStore.getState();
+
+          // 单变体占位消息（updateVariant 依赖 currentConcurrentGeneration，复用并发框架）
+          setMessages(p => [...p, {
+            id: messageId,
+            role: 'ai',
+            content: '✨ 智能构建中...',
+            variants: [],
+            concurrencyCount: 1,
+            generationMode: 'smart'
+          }]);
+          startConcurrentGeneration(messageId, 1, 'smart');
+          setAgentSteps([{ id: 'smart-init', label: '✨ 智能构建引擎启动', status: 'done' }]);
+
+          // Dev Console: Log Smart mode start
+          if (apiSettings.debugMode) {
+            setDevLogs(prev => [...prev, { type: 'user', content: userMessage }]);
+            if (currentCode) {
+              setDevLogs(prev => [...prev, { type: 'info', content: `?? Modifying existing code (${currentCode.length} chars)` }]);
+            }
+          }
+
+          // 调用智能变体生成（v0 = 消息 variants[0]；成功后 updateVariant 已自动更新消息/3D 场景）
+          await generateVariantSmart(
+            userMessage,
+            0,
+            abortControllerRef.current?.signal,
+            currentCode,
+            activeImageUrl
+          );
+
+          // 保存生成的代码，供「查看脚本」和后续修改使用
+          const doneMsg = useStore.getState().currentMessages.find(m => m.id === messageId);
+          const doneVariant = doneMsg?.variants?.find(v => v.id === 'variant-0');
+          if (doneVariant && doneVariant.status === 'done' && doneVariant.content) {
+            const codeMatch = doneVariant.content.match(/```(?:javascript|js)?\n([\s\S]*?)```/);
+            const code = codeMatch ? codeMatch[1].trim() : doneVariant.content.trim();
+            if (code) setLastGeneratedCode(code);
+            console.log(`[App] Smart generated ${doneVariant.blocks?.length || 0} blocks`);
+          } else {
+            const errText = doneVariant?.error ? `：${doneVariant.error}` : '';
+            setMessages(p => [...p, { role: 'system', content: `? 智能构建失败${errText}` }]);
+          }
+
+          // Final Cleanup
+          finalizeConcurrentGeneration();
+
+          // 同步消息（store→React）：更新占位消息为最终内容（含变体数据）
+          const finalMsg = useStore.getState().currentMessages.find(m => m.id === messageId);
+          if (finalMsg) {
+            setMessages(p => p.map(m => (m.id === messageId ? finalMsg : m)));
+          } else {
+            setMessages(p => p.filter(m => m.id !== messageId));
+          }
+
+          // 保存快照（记录本次生成）
+          pushChatSnapshot();
+
+          // 智能引擎已自行完成代码执行与场景更新，跳过公共收尾（避免空代码二次执行清空场景）
+          console.log('[App] Smart generation finished');
+          return;
 
         } else {
           // ============ FAST GENERATION (Direct) ============
