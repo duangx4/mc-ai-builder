@@ -314,6 +314,7 @@ export async function generateWithSmartEngine(config) {
   let refineCount = 0;
   let stepCount = 0;
   let emptyResponseCount = 0; // 连续空响应计数（熔断机制）
+  let constructionRebased = false; // construction 阶段上下文重建标志（只做一次）
 
   // 通知阶段变化
   const changePhase = (newPhase, reason = '') => {
@@ -624,7 +625,28 @@ export async function generateWithSmartEngine(config) {
   async function executeConstructionPhase() {
     callbacks.onStatus?.('Construction: 生成建筑代码...');
 
-    // 强指令：阻断模型被 planning 阶段历史带偏（实测模型常再次输出规划而不生成代码）
+    // 关键修复：construction 阶段重建干净上下文（只做一次）
+    // 实测模型被 planning 阶段的对话产物带偏——进入 construction 后仍持续输出规划 JSON 而不生成代码；
+    // 重建后模型只见「system + 用户需求 + plan 摘要 + 阶段强指令」，无从回到规划模式
+    if (!constructionRebased) {
+      constructionRebased = true;
+      if (messages.length > 2) {
+        const sysMsg = messages[0];
+        const userMsg = messages.find(m => m.role === 'user');
+        messages.length = 0;
+        if (sysMsg) messages.push(sysMsg);
+        if (userMsg) messages.push(userMsg);
+        console.log(`[SmartEngine] Construction 上下文重建：保留 ${messages.length} 条（system+user）`);
+        // 附上 plan 摘要（紧凑，保持构建依据）
+        if (plan) {
+          const planSummary = `已确认的构建计划（供生成代码参考）：风格=${plan.style || 'unknown'}；区块 ${(plan.blocks || []).map(b => `「${b.name}(${b.id}) ${(b.size || []).join('x')}」`).join('；')}${plan.globalNotes ? `；整体要求：${plan.globalNotes}` : ''}`;
+          messages.push({ role: 'system', content: planSummary });
+          console.log(`[SmartEngine] 附 plan 摘要：${planSummary.slice(0, 120)}...`);
+        }
+      }
+    }
+
+    // 强指令：阻断模型回到规划模式（实测模型常再次输出规划而不生成代码）
     messages.push({
       role: 'system',
       content: '**当前阶段：CONSTRUCTION（生成代码）**。立即使用 generate_code 工具输出完整的 Minecraft 建筑 JavaScript 代码。禁止再次输出规划、JSON、markdown 说明或文字描述——直接调用工具生成代码，代码必须调用 builder.* API（如 builder.set / builder.fill）。'
