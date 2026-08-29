@@ -677,6 +677,16 @@ export async function runPartitionedBuild(config) {
     finalCode = `${mergeResult.code}\n\n${seamValidation.fillCode}`;
   }
 
+  // 熔断：SEAM FILL 填充代码占比过高（>60%）说明主体构建失败，只剩填充在堆方块
+  //（已实测两次踩坑：四合院 2139 块石砖 / 台基+柱 630 块均为纯填充产物）
+  const fillLen = (seamValidation.fillCode || '').length;
+  const mainLen = (mergeResult.code || '').length;
+  if (fillLen > 0 && mainLen > 0 && fillLen / (fillLen + mainLen) > 0.6) {
+    const err = new Error(`衔接填充占比过高（填充 ${fillLen}B / 主体 ${mainLen}B），判定主体构建异常，回退常规构建`);
+    callbacks.onStatus?.(err.message);
+    throw err;
+  }
+
   callbacks.onStatus?.(
     `分区构建完成：${completedCount}/${tasksToRebuild.length} 成功，跳过 ${skippedCount} 个`
   );
@@ -752,8 +762,14 @@ ${task.notes ? `- 备注: ${task.notes}` : ''}
 
 2. 使用提供的位置和尺寸精确构建
 3. 保持与整体风格一致
+4. **严格禁止实心堆砌**：不要用大的三重循环把整个区块填成实心方块。必须按照建筑结构构建：
+   - 墙体用循环构建（边缘一圈，内部留空）
+   - 开口/门窗/门洞不要用方块堵死
+   - 柱子/梁/屋顶按薄结构逐根/逐层放置
+   - 需要中空的区域（庭院/室内/天井）保持 AIR（不要放置方块）
+   - 优先使用 builder.set 逐位置精确放置，避免大范围 fill
 ${previousError ? `
-4. 上一次构建失败，错误信息：${String(previousError).slice(0, 300)}
+5. 上一次构建失败，错误信息：${String(previousError).slice(0, 300)}
    请避免同类错误（尤其是：代码语法错误、引号/括号不匹配、变量未定义、漏掉部分结构）。` : ''}`;
 
     // 简化的构建流程（只生成代码，不进入完整的阶段循环）
