@@ -555,6 +555,40 @@ export async function runPartitionedBuild(config) {
 
     const batchResults = await Promise.allSettled(batchPromises);
 
+    // 失败自动重试一次（带上次错误，给 LLM 修正机会）
+    const retryPromises = batch.map((task, i) => {
+      const r = batchResults[i];
+      const failed = r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success);
+      if (!failed) return null;
+      const prevErr = r.status === 'rejected' ? String(r.reason) : (r.value.error || 'unknown');
+      callbacks.onStatus?.(`区块 ${task.id} 失败（${prevErr.slice(0, 60)}），自动重试...`);
+      return buildSingleBlock({
+        task,
+        userMessage,
+        plan,
+        apiKey,
+        baseUrl,
+        model,
+        callbacks,
+        imageUrl,
+        signal,
+        settings,
+        previousError: prevErr
+      });
+    }).filter(Boolean);
+
+    const retryResults = retryPromises.length > 0 ? await Promise.allSettled(retryPromises) : [];
+    let retryIdx = 0;
+    for (let i = 0; i < batchResults.length; i++) {
+      const r = batchResults[i];
+      const task = batch[i];
+      const failedFirst = r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success);
+      if (failedFirst && retryResults[retryIdx]) {
+        batchResults[i] = retryResults[retryIdx];
+        retryIdx++;
+      }
+    }
+
     // 收集结果
     for (let i = 0; i < batchResults.length; i++) {
       const result = batchResults[i];
@@ -581,6 +615,15 @@ export async function runPartitionedBuild(config) {
         });
       }
     }
+  }
+
+  // 失败比例容错：失败 >= 1/3 时整体回退常规构建（缺块建筑比回退更糟）
+  const failedCount = blockResults.filter(b => !b.success).length;
+  const totalCount = Math.max(1, tasksToRebuild.length);
+  if (failedCount > 0 && failedCount / totalCount >= 1 / 3) {
+    const err = new Error(`分区构建失败率过高（${failedCount}/${totalCount} 区块失败），回退常规构建`);
+    callbacks.onStatus?.(err.message);
+    throw err;
   }
 
   // 衔接校验与修复
@@ -682,7 +725,8 @@ async function buildSingleBlock(config) {
     callbacks = {},
     imageUrl: _imageUrl = null,
     signal = null,
-    settings = {}
+    settings = {},
+    previousError = null
   } = config;
 
   try {
@@ -707,7 +751,10 @@ ${task.notes ? `- 备注: ${task.notes}` : ''}
    // BLOCK ${task.id} END
 
 2. 使用提供的位置和尺寸精确构建
-3. 保持与整体风格一致`;
+3. 保持与整体风格一致
+${previousError ? `
+4. 上一次构建失败，错误信息：${String(previousError).slice(0, 300)}
+   请避免同类错误（尤其是：代码语法错误、引号/括号不匹配、变量未定义、漏掉部分结构）。` : ''}`;
 
     // 简化的构建流程（只生成代码，不进入完整的阶段循环）
     // 这里我们直接调用 AI 生成代码
