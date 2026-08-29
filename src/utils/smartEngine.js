@@ -631,8 +631,11 @@ export async function generateWithSmartEngine(config) {
     if (!response.codeGenerated && !context.currentCode) {
       emptyResponseCount++;
 
-      if (emptyResponseCount >= 2) {
-        throw new Error('连续 2 次空响应，熔断');
+      // 诊断日志：空响应时输出请求上下文（定位 cfbot/opus5 长上下文空响应问题）
+      console.warn(`[SmartEngine] 空响应 #${emptyResponseCount}，阶段=${currentPhase}，消息数=${messages.length}，总字符=${messages.reduce((s, m) => s + String(m.content || '').length, 0)}，返回内容=${String(response.content || '').slice(0, 80)}`);
+
+      if (emptyResponseCount >= 3) {
+        throw new Error('连续 3 次空响应，熔断');
       }
 
       callbacks.onStatus?.('警告: 未生成代码，重试...');
