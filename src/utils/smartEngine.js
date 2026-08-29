@@ -624,6 +624,12 @@ export async function generateWithSmartEngine(config) {
   async function executeConstructionPhase() {
     callbacks.onStatus?.('Construction: 生成建筑代码...');
 
+    // 强指令：阻断模型被 planning 阶段历史带偏（实测模型常再次输出规划而不生成代码）
+    messages.push({
+      role: 'system',
+      content: '**当前阶段：CONSTRUCTION（生成代码）**。立即使用 generate_code 工具输出完整的 Minecraft 建筑 JavaScript 代码。禁止再次输出规划、JSON、markdown 说明或文字描述——直接调用工具生成代码，代码必须调用 builder.* API（如 builder.set / builder.fill）。'
+    });
+
     // 发起 LLM 请求
     const response = await callLLMWithTools();
 
