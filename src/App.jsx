@@ -10,6 +10,7 @@ import CodeViewerModal from './components/CodeViewerModal';
 import ImageViewerModal from './components/ImageViewerModal';
 import BlockToolsPanel from './components/BlockToolsPanel';
 import VariantTabs from './components/VariantTabs';
+import ProjectionViewer from './components/ProjectionViewer';
 import { generateStructureCommand } from './utils/parser';
 import { generateOneCommand, exportToMcFunction, exportToNBTStructure, exportToWorldEdit, exportToLitematica, exportToAxiom, exportToDatapack } from './utils/exporter';
 import ImportModal from './components/ImportModal';
@@ -281,6 +282,7 @@ function App() {
   const [isDevConsoleOpen, setIsDevConsoleOpen] = useState(false); // Dev console modal visibility
   const [attachedImages, setAttachedImages] = useState([]); // User uploaded images for Vision API (max 3)
   const [viewingImage, setViewingImage] = useState(null); // Image URL for fullscreen viewer
+  const [isProjectionOpen, setIsProjectionOpen] = useState(false); // Projection viewer modal
   // Note: apiConversationHistory is now managed by useStore for persistence
   const controlsRef = useRef();
 
@@ -3376,6 +3378,15 @@ ${finalCode}
             <Layers size={14} className={viewMode === 'blueprint' ? "text-blue-400" : "text-neutral-400"} />
             <span>{viewMode === 'blueprint' ? t('blueprint') : t('minecraft')}</span>
           </button>
+
+          <button
+            onClick={() => setIsProjectionOpen(true)}
+            className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 hover:text-white hover:border-orange-500/50 transition-all"
+            title="投影查看器"
+          >
+            <Ruler size={14} />
+            <span>📐 投影</span>
+          </button>
         </div >
 
         {/* Control Mode Toggles */}
@@ -3569,6 +3580,22 @@ ${finalCode}
         onClose={() => setViewingImage(null)}
         imageUrl={viewingImage}
       />
+
+      {/* Projection Viewer Modal - 2D three-view projections */}
+      {isProjectionOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="relative w-full h-full max-w-[95vw] max-h-[95vh] bg-neutral-900 rounded-lg shadow-2xl border border-neutral-700 overflow-hidden">
+            <button
+              onClick={() => setIsProjectionOpen(false)}
+              className="absolute top-4 right-4 z-10 p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition"
+              title="关闭"
+            >
+              <X size={20} className="text-white" />
+            </button>
+            <ProjectionViewer />
+          </div>
+        </div>
+      )}
     </div >
   );
 }
