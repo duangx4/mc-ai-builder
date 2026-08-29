@@ -649,7 +649,7 @@ export async function generateWithSmartEngine(config) {
     // 强指令：阻断模型回到规划模式（实测模型常再次输出规划而不生成代码）
     messages.push({
       role: 'system',
-      content: '**当前阶段：CONSTRUCTION（生成代码）**。立即使用 generate_code 工具输出完整的 Minecraft 建筑 JavaScript 代码。禁止再次输出规划、JSON、markdown 说明或文字描述——直接调用工具生成代码，代码必须调用 builder.* API（如 builder.set / builder.fill）。'
+      content: '**当前阶段：CONSTRUCTION（生成代码）**。立即使用 generate_code 工具输出完整的 Minecraft 建筑 JavaScript 代码。禁止再次输出规划、JSON、markdown 说明或文字描述——直接调用工具生成代码，代码必须调用 builder.* API（如 builder.set / builder.fill）。\n\n**屋顶生成规范（重要）**——如果需要屋顶，必须按以下方式构建，禁止平顶或薄片收边：\n1. 结构：双坡屋顶 = 两侧山墙上方逐层内收的斜坡，每升高 1 格水平内收 1 格（约 45° 坡）；单坡屋顶 = 一侧高一侧低逐层倾斜。\n2. 层次：屋顶至少 3 层结构——下层用深色橡木木板/横梁（builder.set 在屋檐下做一圈檐口支撑），中层瓦片主层（灰色瓦片/深灰混凝土），上层屋脊（顶部最后一层收成一条或一排脊瓦）。\n3. 飞檐：瓦片外沿挑出墙外 1 格（屋檐比墙体宽 1 圈），四角不悬空（角部用橡木梁承接）。\n4. 比例：屋顶总高约为建筑高度的 30%~50%，坡度均匀；建筑较矮（≤5 格）时可用简化单坡或平顶。'
     });
 
     // 发起 LLM 请求
