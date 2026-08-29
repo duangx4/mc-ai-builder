@@ -13,7 +13,8 @@
 
 // Version groups with metadata
 export const VERSION_GROUPS = [
-    { id: '1.21', label: '1.21+ (最新)', description: 'Tricky Trials', dataVersion: 3953, packFormat: 48, isLatest: true },
+    { id: '1.21', label: '1.21+', description: 'Tricky Trials', dataVersion: 3953, packFormat: 48 },
+    { id: '1.20.1', label: '1.20.1 (推荐)', description: 'Trails & Tales', dataVersion: 3700, packFormat: 15, isLatest: true },
     { id: '1.20', label: '1.20.x', description: 'Trails & Tales', dataVersion: 3700, packFormat: 15 },
     { id: '1.19', label: '1.19.x', description: 'The Wild Update', dataVersion: 3337, packFormat: 10 },
     { id: '1.18', label: '1.18.x', description: 'Caves & Cliffs Part 2', dataVersion: 2975, packFormat: 8 },

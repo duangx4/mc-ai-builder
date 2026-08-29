@@ -264,7 +264,7 @@ function App() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isVersionSelectOpen, setIsVersionSelectOpen] = useState(false); // Version selection modal
   const [selectedExportType, setSelectedExportType] = useState(null); // 'datapack', 'occ', 'nbt', etc.
-  const [selectedVersion, setSelectedVersion] = useState('1.21'); // Selected MC version
+  const [selectedVersion, setSelectedVersion] = useState('1.20.1'); // Selected MC version
   const [isDayMode, setIsDayMode] = useState(true);
   const [streamingText, setStreamingText] = useState('');
   const [activeTab, setActiveTab] = useState('chat');
