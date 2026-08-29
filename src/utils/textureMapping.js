@@ -610,6 +610,35 @@ export const BLOCK_TEXTURE_ALIASES = {
     'lava': 'lava_still',
 };
 
+// 发光方块列表（1.20.1 真实存在的发光方块）
+// 这些方块使用 MeshBasicMaterial 保持固有明亮，不受光照影响（模拟自发光）
+export const GLOW_BLOCKS = [
+  'glowstone',
+  'lantern',
+  'soul_lantern',
+  'sea_lantern',
+  'magma_block',
+  'shroomlight',
+  'redstone_lamp',
+  'torch',
+  'wall_torch',
+  'soul_torch',
+  'redstone_torch',
+  'cave_vines',
+  'cave_vines_plant',
+];
+
+// 水方块列表（需要特殊半透明处理）
+// water/flowing_water 会有动画效果，kelp/seagrass 走 cross 路径
+export const WATER_BLOCKS = [
+  'water',
+  'flowing_water',
+  'kelp',
+  'kelp_plant',
+  'seagrass',
+  'tall_seagrass',
+];
+
 export const FALLBACK_COLORS = {
     // Woods
     'oak_planks': '#b8945f',

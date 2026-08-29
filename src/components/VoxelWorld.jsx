@@ -5,7 +5,7 @@ import { TextureLoader, NearestFilter } from 'three';
 import * as THREE from 'three';
 import useStore from '../store/useStore';
 import { TransformControls } from '@react-three/drei';
-import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS } from '../utils/textureMapping';
+import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS } from '../utils/textureMapping';
 
 
 // Blocks that should NOT load textures (use fallback colors only)
@@ -359,30 +359,70 @@ export function clearMaterialCache() {
     materialCache.clear();
 }
 
+/**
+ * 材质工厂 - 根据方块类型创建合适的材质
+ * - 发光方块（GLOW_BLOCKS）: MeshBasicMaterial（固有明亮，不受光照影响）
+ * - 水方块（WATER_BLOCKS）: 半透明蓝色 MeshBasicMaterial
+ * - 普通方块: MeshLambertMaterial（受光照，产生明暗面）
+ */
 function getOrCreateMaterial(blockType, version = '1.20.1') {
     const textureKey = ALIASES[blockType] || blockType;
+    const isGlow = GLOW_BLOCKS.includes(blockType);
+    const isWater = WATER_BLOCKS.includes(blockType) && (blockType === 'water' || blockType === 'flowing_water');
 
-    if (materialCache.has(textureKey)) {
-        return materialCache.get(textureKey);
+    // 缓存 key 加类别前缀防串用
+    let cacheKey = textureKey;
+    if (isGlow) cacheKey = `glow:${textureKey}`;
+    else if (isWater) cacheKey = `water:${textureKey}`;
+    else cacheKey = `lambert:${textureKey}`;
+
+    if (materialCache.has(cacheKey)) {
+        return materialCache.get(cacheKey);
     }
 
     const fallbackColor = FALLBACK_COLORS[blockType] || FALLBACK_COLORS['default'];
     const useFallbackOnly = USE_FALLBACK_ONLY.includes(blockType);
     const isTransparent = TRANSPARENT_BLOCKS.includes(blockType);
 
-    // Create material
-    const material = new THREE.MeshBasicMaterial({
-        color: fallbackColor,
-        toneMapped: false,
-        transparent: isTransparent,
-        opacity: isTransparent ? 0.6 : 1.0,
-        side: THREE.FrontSide,
-        depthTest: true,
-        depthWrite: !isTransparent,
-    });
+    let material;
 
-    // Load texture asynchronously
-    if (!useFallbackOnly) {
+    // 水方块：半透明蓝色 Basic 材质
+    if (isWater) {
+        material = new THREE.MeshBasicMaterial({
+            color: '#3f76e4',
+            toneMapped: false,
+            transparent: true,
+            opacity: 0.75,
+            side: THREE.FrontSide,
+            depthTest: true,
+            depthWrite: false,
+        });
+    }
+    // 发光方块：Basic 材质（固有明亮）
+    else if (isGlow) {
+        material = new THREE.MeshBasicMaterial({
+            color: fallbackColor,
+            toneMapped: false,
+            transparent: false,
+            side: THREE.FrontSide,
+            depthTest: true,
+            depthWrite: true,
+        });
+    }
+    // 普通方块：Lambert 材质（受光照）
+    else {
+        material = new THREE.MeshLambertMaterial({
+            color: fallbackColor,
+            transparent: isTransparent,
+            opacity: isTransparent ? 0.6 : 1.0,
+            side: THREE.FrontSide,
+            depthTest: true,
+            depthWrite: !isTransparent,
+        });
+    }
+
+    // 异步加载纹理（除非是 fallback-only 或水方块）
+    if (!useFallbackOnly && !isWater) {
         loadTexture(textureKey, version).then((tex) => {
             if (tex) {
                 material.map = tex;
@@ -392,7 +432,7 @@ function getOrCreateMaterial(blockType, version = '1.20.1') {
         });
     }
 
-    materialCache.set(textureKey, material);
+    materialCache.set(cacheKey, material);
     return material;
 }
 
@@ -455,6 +495,8 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
             material={material}
             onClick={handleClick}
             frustumCulled={true}
+            castShadow
+            receiveShadow
         >
             <boxGeometry args={[1, 1, 1]} />
         </instancedMesh>
@@ -546,6 +588,7 @@ function CrossInstancedBlocks({ blocks, blockType, onBlockClick, version = '1.20
                 material={material}
                 onClick={handleClick}
                 frustumCulled={true}
+                castShadow
             >
                 <planeGeometry args={[1.414, 1]} />
             </instancedMesh>
@@ -556,10 +599,79 @@ function CrossInstancedBlocks({ blocks, blockType, onBlockClick, version = '1.20
                 material={material}
                 onClick={handleClick}
                 frustumCulled={true}
+                castShadow
             >
                 <planeGeometry args={[1.414, 1]} />
             </instancedMesh>
         </group>
+    );
+}
+
+/**
+ * WaterBlocks - 水方块专用组件，带波动动画
+ * 仅当方块数 < 800 时启用动画，否则静态渲染
+ */
+function WaterBlocks({ blocks, version = '1.20.1' }) {
+    const meshRef = useRef();
+    const tempObject = useMemo(() => new THREE.Object3D(), []);
+    const material = useMemo(() => getOrCreateMaterial('water', version), [version]);
+    const enableAnimation = blocks.length < 800;
+
+    // 为每个方块分配一个随机相位
+    const phases = useMemo(() =>
+        blocks.map(() => Math.random() * Math.PI * 2),
+        [blocks]
+    );
+
+    // 初始化位置
+    useEffect(() => {
+        if (!meshRef.current || blocks.length === 0) return;
+
+        blocks.forEach((block, i) => {
+            tempObject.position.set(
+                block.position[0] + 0.5,
+                block.position[1] + 0.5,
+                block.position[2] + 0.5
+            );
+            tempObject.scale.set(1, 1, 1);
+            tempObject.updateMatrix();
+            meshRef.current.setMatrixAt(i, tempObject.matrix);
+        });
+
+        meshRef.current.instanceMatrix.needsUpdate = true;
+    }, [blocks, tempObject]);
+
+    // 动画：缓慢高度波动
+    useFrame((state) => {
+        if (!meshRef.current || !enableAnimation || blocks.length === 0) return;
+
+        const t = state.clock.elapsedTime;
+        blocks.forEach((block, i) => {
+            const wave = Math.sin(t * 0.5 + phases[i]) * 0.03;
+            tempObject.position.set(
+                block.position[0] + 0.5,
+                block.position[1] + 0.5 + wave,
+                block.position[2] + 0.5
+            );
+            tempObject.scale.set(1, 1, 1);
+            tempObject.updateMatrix();
+            meshRef.current.setMatrixAt(i, tempObject.matrix);
+        });
+
+        meshRef.current.instanceMatrix.needsUpdate = true;
+    });
+
+    if (blocks.length === 0) return null;
+
+    return (
+        <instancedMesh
+            ref={meshRef}
+            args={[null, null, blocks.length]}
+            material={material}
+            frustumCulled={true}
+        >
+            <boxGeometry args={[1, 1, 1]} />
+        </instancedMesh>
     );
 }
 
@@ -975,15 +1087,18 @@ export default function VoxelWorld({ version = '1.20.1' }) {
     // Removed Auto-center Logic (centerOffset is gone)
 
     const isStair = (block) => block.type?.toLowerCase().includes('_stairs');
+    const isWaterBlock = (block) => block.type === 'water' || block.type === 'flowing_water';
 
-    const { stairBlocks, regularBlocks } = useMemo(() => {
+    const { stairBlocks, waterBlocks, regularBlocks } = useMemo(() => {
         const stairs = [];
+        const water = [];
         const regular = [];
         visibleBlocks.forEach(block => {
             if (isStair(block)) stairs.push(block);
+            else if (isWaterBlock(block)) water.push(block);
             else regular.push(block);
         });
-        return { stairBlocks: stairs, regularBlocks: regular };
+        return { stairBlocks: stairs, waterBlocks: water, regularBlocks: regular };
     }, [visibleBlocks]);
 
     const blocksByTexture = useMemo(() => {
@@ -1068,6 +1183,14 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 />
             ))}
 
+            {/* Render water blocks with animation */}
+            {!useUltraPerformance && waterBlocks.length > 0 && (
+                <WaterBlocks
+                    blocks={waterBlocks}
+                    version={version}
+                />
+            )}
+
             {/* Render stairs - simplified in ultra performance mode */}
             {!useUltraPerformance && stairBlocks.length > 0 && stairBlocks.length < 500 && stairBlocks.map((block) => {
                 const { rotation, isUpsideDown } = getStairTransform(block.properties);
@@ -1092,11 +1215,11 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                         }}
                     >
                         {/* Full-width slab (bottom for normal, top for upside-down) */}
-                        <mesh position={[0, bottomSlabY, 0]} material={material}>
+                        <mesh position={[0, bottomSlabY, 0]} material={material} castShadow receiveShadow>
                             <boxGeometry args={[1, 0.5, 1]} />
                         </mesh>
                         {/* Back half (the solid/high side) */}
-                        <mesh position={[0, topHalfY, 0.25]} material={material}>
+                        <mesh position={[0, topHalfY, 0.25]} material={material} castShadow receiveShadow>
                             <boxGeometry args={[1, 0.5, 0.5]} />
                         </mesh>
                     </group>

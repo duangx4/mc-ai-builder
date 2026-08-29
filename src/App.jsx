@@ -432,6 +432,9 @@ function App() {
 
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // 性能模式判断：方块数 > 1000000 时进入超性能模式
+  const useUltraPerformance = blocks.length > 1000000;
+
   useEffect(() => {
     // Load sessions from server on mount
     const init = async () => {
@@ -3253,10 +3256,43 @@ ${finalCode}
 
         <Canvas camera={{ position: [10, 8, 10], fov: apiSettings.fov || 75 }} shadows className="cursor-grab active:cursor-grabbing">
           <color attach="background" args={[isDayMode ? '#a8d5f0' : '#0a0a0a']} />
-          <fog attach="fog" args={[isDayMode ? '#a8d5f0' : '#0a0a0a', 30, 100]} />
+          {/* 雾微调：白天 [40, 140]，夜间 [15, 60] */}
+          <fog attach="fog" args={[isDayMode ? '#a8d5f0' : '#0a0a0a', isDayMode ? 40 : 15, isDayMode ? 140 : 60]} />
 
-          <ambientLight intensity={isDayMode ? 1.5 : 0.8} />
-          <directionalLight position={[10, 30, 10]} intensity={isDayMode ? 2 : 0.5} color={isDayMode ? '#fff8e0' : '#aabbff'} />
+          {/* 环境光强度微调：白天 1.2 / 夜 0.6 */}
+          <ambientLight intensity={isDayMode ? 1.2 : 0.6} />
+
+          {/* 主光源：投射阴影的平行光 */}
+          <directionalLight
+            position={[10, 30, 10]}
+            intensity={isDayMode ? 2 : 0.5}
+            color={isDayMode ? '#fff8e0' : '#aabbff'}
+            castShadow={apiSettings.shadows !== false && blocks.length < 2000 && !useUltraPerformance}
+            shadow-mapSize-width={useUltraPerformance || blocks.length > 1000 ? 1024 : 2048}
+            shadow-mapSize-height={useUltraPerformance || blocks.length > 1000 ? 1024 : 2048}
+            shadow-camera-left={-60}
+            shadow-camera-right={60}
+            shadow-camera-top={60}
+            shadow-camera-bottom={-60}
+            shadow-camera-near={0.5}
+            shadow-camera-far={100}
+            shadow-bias={-0.0005}
+          />
+
+          {/* 填充光：柔和暗部 */}
+          <hemisphereLight
+            skyColor={isDayMode ? '#aabbff' : '#222244'}
+            groundColor={isDayMode ? '#887755' : '#111111'}
+            intensity={isDayMode ? 0.3 : 0.2}
+          />
+
+          {/* 地面接收阴影平面（可选） */}
+          {apiSettings.groundShadow !== false && apiSettings.shadows !== false && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+              <planeGeometry args={[120, 120]} />
+              <shadowMaterial opacity={isDayMode ? 0.3 : 0.5} />
+            </mesh>
+          )}
 
           {!isDayMode && <Stars radius={100} depth={50} count={3000} factor={3} saturation={0} fade />}
           <Grid infiniteGrid sectionColor={isDayMode ? '#888' : '#333'} cellColor={isDayMode ? '#666' : '#1a1a1a'} fadeDistance={60} />

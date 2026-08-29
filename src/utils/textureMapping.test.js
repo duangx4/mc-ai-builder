@@ -4,7 +4,9 @@ import {
   getFaceTextureNames,
   resolveBlockTextures,
   BLOCK_TEXTURE_ALIASES,
-  FALLBACK_COLORS
+  FALLBACK_COLORS,
+  GLOW_BLOCKS,
+  WATER_BLOCKS
 } from './textureMapping';
 
 describe('纹理映射工具', () => {
@@ -182,6 +184,56 @@ describe('纹理映射工具', () => {
 
     it('glass 应有兜底颜色', () => {
       expect(FALLBACK_COLORS['glass']).toBe('#c0e8f8');
+    });
+  });
+
+  describe('GLOW_BLOCKS - 发光方块列表', () => {
+    it('应包含常见发光方块', () => {
+      expect(GLOW_BLOCKS).toContain('glowstone');
+      expect(GLOW_BLOCKS).toContain('lantern');
+      expect(GLOW_BLOCKS).toContain('sea_lantern');
+      expect(GLOW_BLOCKS).toContain('magma_block');
+      expect(GLOW_BLOCKS).toContain('shroomlight');
+    });
+
+    it('列表不应为空', () => {
+      expect(GLOW_BLOCKS.length).toBeGreaterThan(0);
+    });
+
+    it('列表不应有重复项', () => {
+      const unique = [...new Set(GLOW_BLOCKS)];
+      expect(unique.length).toBe(GLOW_BLOCKS.length);
+    });
+
+    it('列表不应有空条目', () => {
+      expect(GLOW_BLOCKS.every(b => b && b.trim().length > 0)).toBe(true);
+    });
+  });
+
+  describe('WATER_BLOCKS - 水方块列表', () => {
+    it('应包含水相关方块', () => {
+      expect(WATER_BLOCKS).toContain('water');
+      expect(WATER_BLOCKS).toContain('flowing_water');
+      expect(WATER_BLOCKS).toContain('kelp');
+      expect(WATER_BLOCKS).toContain('seagrass');
+    });
+
+    it('列表不应为空', () => {
+      expect(WATER_BLOCKS.length).toBeGreaterThan(0);
+    });
+
+    it('列表不应有重复项', () => {
+      const unique = [...new Set(WATER_BLOCKS)];
+      expect(unique.length).toBe(WATER_BLOCKS.length);
+    });
+
+    it('列表不应有空条目', () => {
+      expect(WATER_BLOCKS.every(b => b && b.trim().length > 0)).toBe(true);
+    });
+
+    it('GLOW_BLOCKS 和 WATER_BLOCKS 不应有重复', () => {
+      const overlap = GLOW_BLOCKS.filter(b => WATER_BLOCKS.includes(b));
+      expect(overlap.length).toBe(0);
     });
   });
 
