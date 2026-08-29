@@ -789,7 +789,7 @@ ${previousError ? `
     }
 
     // 确保代码包含区块标记
-    let code = response.code;
+    let code = cleanBlockCode(response.code);
     if (!code.includes(`// BLOCK ${task.id} START`)) {
       code = `// BLOCK ${task.id} START\n${code}\n// BLOCK ${task.id} END`;
     }
@@ -816,6 +816,23 @@ ${previousError ? `
       error: error.message
     };
   }
+}
+
+/**
+ * 清洗区块代码：剥离模型常输出的模板头（重复 builder 声明 / import / use strict），
+ * 这些会导致 executeVoxelScript 校验报 "Identifier 'builder' has already been declared"
+ */
+function cleanBlockCode(code) {
+  let cleaned = code || '';
+  // 剥离 import/export 语句
+  cleaned = cleaned.replace(/^\s*(import|export)\b.*$/gm, '');
+  // 剥离 builder 重复声明（const/let/var builder = ...）
+  cleaned = cleaned.replace(/^\s*(const|let|var)\s+builder\b[^;]*;?$/gm, '');
+  // 剥离 'use strict' 等 pragma
+  cleaned = cleaned.replace(/^\s*["']use strict["'];?$/gm, '');
+  // 剥离三引号代码块围栏（模型有时把代码包在 ``` 里）
+  cleaned = cleaned.replace(/^```(?:javascript|js)?$/gm, '');
+  return cleaned;
 }
 
 /**
