@@ -20,6 +20,7 @@ import { executeVoxelScript } from './sandbox.js';
 import { STYLE_KNOWLEDGE, detectStyle, getAvailableStyles } from './styleKnowledge.js';
 import { addLineNumbers } from './codeEditor.js';
 import { searchMaterial } from './materialSearch.js';
+import { wrapRequest } from './proxyHelper.js';
 
 // Max iterations to prevent infinite loops
 const MAX_ITERATIONS = 20;
@@ -1780,8 +1781,9 @@ Example: modify_code({ action: "replace", startLine: 15, endLine: 20, content: "
             callbacks.onDevLog?.({ type: 'info', content: '🔄 Calling API...' });
             callbacks.onStatus?.(`⏳ 等待 AI 响应中... (Step ${iteration})`);
             
-            const response = await fetchWithRetry(
-                `${baseUrl}/chat/completions`,
+            const { url: reqUrl, fetchOptions } = wrapRequest(
+                baseUrl,
+                '/chat/completions',
                 {
                     method: 'POST',
                     headers: {
@@ -1796,7 +1798,12 @@ Example: modify_code({ action: "replace", startLine: 15, endLine: 20, content: "
                         max_tokens: config.maxTokens || 16384
                     }),
                     signal
-                },
+                }
+            );
+
+            const response = await fetchWithRetry(
+                reqUrl,
+                fetchOptions,
                 callbacks
             );
             

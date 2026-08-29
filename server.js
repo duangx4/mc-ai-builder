@@ -890,6 +890,47 @@ app.get('/api/versions', (req, res) => {
     }
 });
 
+// ============ AI 代理（绕 CORS）============
+// 部分第三方 LLM 网关（如 edge-cn.botcf.com）不返回 CORS 允许头，浏览器直连被拦。
+// 前端检测到需要代理时，把请求 POST 到这里，由服务端转发（支持 SSE 流式）。
+app.post('/api/ai-proxy', async (req, res) => {
+    try {
+        const { url, headers = {}, body } = req.body || {};
+        if (!url || !/^https?:\/\//.test(url)) {
+            return res.status(400).json({ error: 'invalid url' });
+        }
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify(body || {})
+        });
+        const ct = r.headers.get('content-type') || '';
+        res.status(r.status);
+        if (ct.includes('text/event-stream')) {
+            // SSE 流式透传
+            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.flushHeaders?.();
+            const reader = r.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                res.write(decoder.decode(value, { stream: true }));
+            }
+            decoder.decode();
+            res.end();
+        } else {
+            res.setHeader('Content-Type', ct || 'application/json');
+            res.send(await r.text());
+        }
+    } catch (err) {
+        console.error('AI proxy error:', err.message);
+        res.status(502).json({ error: 'proxy error: ' + err.message });
+    }
+});
+
 // ============ 心跳检测 - 网页关闭时自动退出 ============
 let lastHeartbeat = Date.now();
 const HEARTBEAT_TIMEOUT = 10000; // 10秒没有心跳就退出

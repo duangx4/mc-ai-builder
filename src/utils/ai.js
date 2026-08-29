@@ -8,6 +8,7 @@ import { SYSTEM_PROMPT } from './prompts.js';
 import { addLineNumbers } from './codeEditor.js';
 import { createSSEParser } from './sseParser.js';
 import { fetchWithRetry } from './fetchWithRetry.js';
+import { wrapRequest } from './proxyHelper.js';
 
 export { SYSTEM_PROMPT }; // Re-export for compatibility
 
@@ -168,8 +169,10 @@ builder.fill(x1, topY, z1, x2, topY + 2, z2, 'WALL_MATERIAL');
     }
 
     try {
-        const response = await fetchWithRetry(
-            `${baseUrl}/chat/completions`,
+        // 构造请求（botcf 等 CORS 受限网关自动走同源代理）
+        const { url: reqUrl, fetchOptions } = wrapRequest(
+            baseUrl,
+            '/chat/completions',
             {
                 method: 'POST',
                 headers: {
@@ -178,7 +181,12 @@ builder.fill(x1, topY, z1, x2, topY + 2, z2, 'WALL_MATERIAL');
                 },
                 body: JSON.stringify(requestBody),
                 signal: signal
-            },
+            }
+        );
+
+        const response = await fetchWithRetry(
+            reqUrl,
+            fetchOptions,
             {
                 timeout: 120000, // 120s 超时
                 maxRetries: 3,
