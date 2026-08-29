@@ -583,6 +583,30 @@ export async function runPartitionedBuild(config) {
     }
   }
 
+  // 衔接校验与修复
+  callbacks.onStatus?.('校验区块衔接...');
+
+  const { buildAdjacencyTable, validateSeams } = await import('./adjacencyEngine.js');
+  const adjacencyTable = buildAdjacencyTable(tasks);
+  const seamValidation = validateSeams(tasks, plan, adjacencyTable);
+
+  // 记录衔接问题
+  const fatalSeamIssues = seamValidation.issues.filter(i => i.type === 'fatal');
+  const fixableSeamIssues = seamValidation.issues.filter(i => i.type === 'fixable');
+  const seamWarnings = seamValidation.issues.filter(i => i.type === 'warning');
+
+  if (fatalSeamIssues.length > 0) {
+    warnings.push(`发现 ${fatalSeamIssues.length} 个严重衔接问题（重叠/高度差过大）`);
+  }
+
+  if (fixableSeamIssues.length > 0) {
+    callbacks.onStatus?.(`自动修复 ${fixableSeamIssues.length} 个衔接问题（缝隙/高度差）`);
+  }
+
+  if (seamWarnings.length > 0) {
+    seamWarnings.forEach(w => warnings.push(w.message));
+  }
+
   // 合并所有区块代码
   callbacks.onStatus?.('合并区块代码...');
 
@@ -600,17 +624,40 @@ export async function runPartitionedBuild(config) {
     warnings.push('合并后的代码验证失败');
   }
 
+  // 如果有自动生成的衔接填充代码，追加到合并代码后
+  let finalCode = mergeResult.code;
+  if (seamValidation.fillCode) {
+    finalCode = `${mergeResult.code}\n\n${seamValidation.fillCode}`;
+  }
+
   callbacks.onStatus?.(
     `分区构建完成：${completedCount}/${tasksToRebuild.length} 成功，跳过 ${skippedCount} 个`
   );
 
+  // 通过 onPlan 回传衔接信息
+  if (adjacencyTable.length > 0) {
+    callbacks.onPlan?.({
+      ...plan,
+      seams: {
+        edges: adjacencyTable,
+        issues: seamValidation.issues,
+        filled: fixableSeamIssues.length
+      }
+    });
+  }
+
   return {
-    code: mergeResult.code,
+    code: finalCode,
     plan,
     blockResults,
     warnings,
     skippedCount,
-    valid: mergeResult.valid
+    valid: mergeResult.valid,
+    seams: {
+      edges: adjacencyTable,
+      issues: seamValidation.issues,
+      filled: fixableSeamIssues.length
+    }
   };
 }
 
