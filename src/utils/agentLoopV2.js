@@ -19,6 +19,7 @@ import { VALID_BLOCKS_1_21 } from './validBlocks.js';
 import { executeVoxelScript } from './sandbox.js';
 import { STYLE_KNOWLEDGE, detectStyle, getAvailableStyles } from './styleKnowledge.js';
 import { addLineNumbers } from './codeEditor.js';
+import { searchMaterial } from './materialSearch.js';
 
 // Max iterations to prevent infinite loops
 const MAX_ITERATIONS = 20;
@@ -1469,6 +1470,64 @@ const AGENT_TOOLS_V2 = {
                     valid: false, 
                     error: err.message,
                     hint: "⚠️ Use modify_code to fix the specific error instead of regenerating the entire code."
+                };
+            }
+        }
+    },
+
+    searchMaterial: {
+        name: "searchMaterial",
+        description: "Search the material library (1700+ blocks) by name, category, or keyword. Returns up to 20 matching materials.",
+        parameters: {
+            type: "object",
+            properties: {
+                query: {
+                    type: "string",
+                    description: "Search query: material name (e.g., 'oak'), category (e.g., 'concrete'), or keyword (e.g., 'red')"
+                }
+            },
+            required: ["query"]
+        },
+        execute: async (args) => {
+            const query = args.query || '';
+
+            if (!query.trim()) {
+                return {
+                    success: false,
+                    error: "Query cannot be empty"
+                };
+            }
+
+            try {
+                const results = searchMaterial(query);
+
+                if (results.length === 0) {
+                    return {
+                        success: true,
+                        results: [],
+                        count: 0,
+                        message: `No materials found for query: "${query}"`
+                    };
+                }
+
+                // Format results for display
+                const formattedResults = results.map(m => ({
+                    id: m.id,
+                    name: m.name,
+                    category: m.category,
+                    tags: m.tags.join(', ')
+                }));
+
+                return {
+                    success: true,
+                    results: formattedResults,
+                    count: results.length,
+                    message: `Found ${results.length} material(s) for query: "${query}"`
+                };
+            } catch (err) {
+                return {
+                    success: false,
+                    error: `Search failed: ${err.message}`
                 };
             }
         }

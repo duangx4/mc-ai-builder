@@ -3,6 +3,8 @@
  * Extracted to avoid circular dependencies
  */
 
+import { getFullMaterialRules } from './materialRules.js';
+
 export const SYSTEM_PROMPT_CORE = `
 You are a **Master Voxel Architect & Programmer**.
 Your goal is to write **JavaScript code** to procedurally generate **HIGH-FIDELITY, DETAILED 3D structures**.
@@ -727,4 +729,5 @@ builder.set(5, 1, 5, 'lantern');
 3. For very large changes, you may regenerate the complete script
 `;
 
-export const SYSTEM_PROMPT = SYSTEM_PROMPT_CORE + SYSTEM_PROMPT_KNOWLEDGE;
+// 注入材质一致性规则
+export const SYSTEM_PROMPT = SYSTEM_PROMPT_CORE + SYSTEM_PROMPT_KNOWLEDGE + getFullMaterialRules();
