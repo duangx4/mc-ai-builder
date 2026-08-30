@@ -5,7 +5,7 @@ import { TextureLoader, NearestFilter } from 'three';
 import * as THREE from 'three';
 import useStore from '../store/useStore';
 import { TransformControls } from '@react-three/drei';
-import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP } from '../utils/textureMapping';
+import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP, cleanBlockType } from '../utils/textureMapping';
 import { inferConnections } from '../utils/blockConnections';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
@@ -107,16 +107,18 @@ const BLOCK_SHAPES = {
     'button': { size: [0.375, 0.125, 0.25], offset: [0, 0, 0.375] },
     // Flower pots - small decorative
     'flower_pot': { size: [0.375, 0.375, 0.375], offset: [0, -0.3125, 0] },
-    // Lanterns
-    'lantern': { size: [0.375, 0.5625, 0.375], offset: [0, -0.21875, 0] },
+    // Lanterns - composite shape (hook + body)
+    'lantern': { size: [0.375, 0.5625, 0.375], offset: [0, -0.21875, 0], isComposite: true },
     // Candles
     'candle': { size: [0.25, 0.375, 0.25], offset: [0, -0.3125, 0] },
-    // Torches
-    'torch': { size: [0.125, 0.625, 0.125], offset: [0, -0.1875, 0] },
+    // Torches - composite shape (stick + flame)
+    'torch': { size: [0.125, 0.625, 0.125], offset: [0, -0.1875, 0], isComposite: true },
     // Walls - slightly narrower
     'wall': { size: [0.5, 1, 0.5], offset: [0, 0, 0] },
     // Fences
     'fence': { size: [0.25, 1, 0.25], offset: [0, 0, 0] },
+    // Fence gates - thin door panel
+    'gate': { size: [1, 0.875, 0.1875], offset: [0, -0.0625, 0] },
     // Cross shape for plants (two intersecting planes)
     'cross': { size: [1, 1, 1], offset: [0, 0, 0], isCross: true },
     // Full block (default)
@@ -149,8 +151,9 @@ const CROSS_BLOCKS = [
 
 // Map block types to their shape category
 const getBlockShape = (blockType) => {
-    const type = blockType.toLowerCase();
-    
+    // 清洗类型名（去除 [properties] 后缀）
+    const type = cleanBlockType(blockType).toLowerCase();
+
     // Check for cross blocks first
     if (CROSS_BLOCKS.some(cb => type === cb || type.startsWith(cb + '?'))) return 'cross';
 
@@ -177,6 +180,9 @@ const getBlockShape = (blockType) => {
 
     // Torches
     if (type.includes('torch') && !type.includes('torchflower')) return 'torch';
+
+    // Fence gates
+    if (type.includes('_fence_gate')) return 'gate';
 
     // Walls
     if (type.includes('_wall') && !type.includes('wall_')) return 'wall';
@@ -452,6 +458,7 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
     // Check if this is a cross-shaped block
     const shapeType = getBlockShape(blockType);
     const isCross = BLOCK_SHAPES[shapeType]?.isCross;
+    const isComposite = BLOCK_SHAPES[shapeType]?.isComposite;
 
     // Check if this is a fence or wall (need special rendering)
     const isFence = blockType.includes('_fence') && !blockType.includes('fence_gate');
@@ -486,6 +493,18 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
     };
 
     if (blocks.length === 0) return null;
+
+    // For composite blocks (torch/lantern), use composite renderer
+    if (isComposite) {
+        return (
+            <TorchLanternInstancedBlocks
+                blocks={blocks}
+                blockType={blockType}
+                onBlockClick={onBlockClick}
+                version={version}
+            />
+        );
+    }
 
     // For cross-shaped blocks, render as individual CrossBlocks for now
     // (instanced cross rendering is complex and would require custom shaders)
@@ -529,12 +548,14 @@ function TexturedInstancedBlocks({ blocks, blockType, onBlockClick, positionMap,
 
 /**
  * FenceWallInstancedBlocks - 渲染栅栏/墙方块（带连接推断）
- * 使用 3 个 instancedMesh 组合：柱（所有）+ NS 横杆（连接 n/s）+ EW 横杆（连接 e/w）
+ * 使用多个 instancedMesh 组合：柱（所有）+ 横杆（连接 n/s/e/w，分上下两层）
  */
 function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
     const pillarMeshRef = useRef();
-    const nsBarMeshRef = useRef();
-    const ewBarMeshRef = useRef();
+    const nsBarLowMeshRef = useRef();
+    const ewBarLowMeshRef = useRef();
+    const nsBarHighMeshRef = useRef();
+    const ewBarHighMeshRef = useRef();
     const tempObject = useMemo(() => new THREE.Object3D(), []);
     const material = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
 
@@ -544,10 +565,14 @@ function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '
     const isFence = blockType.includes('_fence');
     const isWall = blockType.includes('_wall');
 
-    // 尺寸配置
-    const pillarSize = isFence ? [0.1875, 1, 0.1875] : [0.5, 1, 0.5];
-    const barSize = isFence ? [1, 0.1875, 0.1875] : [1, 0.5, 0.5]; // 横杆沿 X
-    const barYOffset = isFence ? 0.375 : 0; // fence 横杆 Y 偏移
+    // 尺寸配置（柱边到柱边）
+    const pillarWidth = isFence ? 0.1875 : 0.5;
+    const pillarSize = [pillarWidth, 1, pillarWidth];
+    const barLength = isFence ? 0.8125 : 0.5; // 1 - pillarWidth（柱边到柱边）
+    const barHeight = isFence ? 0.1875 : 0.375;
+    const barSize = [barLength, barHeight, barHeight]; // 横杆沿 X
+    // fence 双横杆：下层 y+0.375、上层 y+0.6875；wall 单层 y+0.25
+    const barYOffsets = isFence ? [0.375, 0.6875] : [0.25];
 
     useEffect(() => {
         if (blocks.length === 0) return;
@@ -581,39 +606,49 @@ function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '
             pillarMeshRef.current.instanceMatrix.needsUpdate = true;
         }
 
-        // 2. 渲染 NS 横杆（沿 Z 方向）
-        if (nsBarMeshRef.current && nsBlocks.length > 0) {
-            nsBlocks.forEach((block, i) => {
-                tempObject.position.set(
-                    block.position[0] + 0.5,
-                    block.position[1] + 0.5 + barYOffset,
-                    block.position[2] + 0.5
-                );
-                // 沿 Z 方向：旋转 90 度
-                tempObject.rotation.set(0, Math.PI / 2, 0);
-                tempObject.scale.set(...barSize);
-                tempObject.updateMatrix();
-                nsBarMeshRef.current.setMatrixAt(i, tempObject.matrix);
+        // 2. 渲染 NS 横杆（沿 Z 方向，分上下层）
+        if (nsBlocks.length > 0) {
+            barYOffsets.forEach((yOffset, layerIdx) => {
+                const meshRef = layerIdx === 0 ? nsBarLowMeshRef : nsBarHighMeshRef;
+                if (meshRef.current) {
+                    nsBlocks.forEach((block, i) => {
+                        tempObject.position.set(
+                            block.position[0] + 0.5,
+                            block.position[1] + 0.5 + yOffset,
+                            block.position[2] + 0.5
+                        );
+                        // 沿 Z 方向：旋转 90 度
+                        tempObject.rotation.set(0, Math.PI / 2, 0);
+                        tempObject.scale.set(...barSize);
+                        tempObject.updateMatrix();
+                        meshRef.current.setMatrixAt(i, tempObject.matrix);
+                    });
+                    meshRef.current.instanceMatrix.needsUpdate = true;
+                }
             });
-            nsBarMeshRef.current.instanceMatrix.needsUpdate = true;
         }
 
-        // 3. 渲染 EW 横杆（沿 X 方向）
-        if (ewBarMeshRef.current && ewBlocks.length > 0) {
-            ewBlocks.forEach((block, i) => {
-                tempObject.position.set(
-                    block.position[0] + 0.5,
-                    block.position[1] + 0.5 + barYOffset,
-                    block.position[2] + 0.5
-                );
-                tempObject.rotation.set(0, 0, 0);
-                tempObject.scale.set(...barSize);
-                tempObject.updateMatrix();
-                ewBarMeshRef.current.setMatrixAt(i, tempObject.matrix);
+        // 3. 渲染 EW 横杆（沿 X 方向，分上下层）
+        if (ewBlocks.length > 0) {
+            barYOffsets.forEach((yOffset, layerIdx) => {
+                const meshRef = layerIdx === 0 ? ewBarLowMeshRef : ewBarHighMeshRef;
+                if (meshRef.current) {
+                    ewBlocks.forEach((block, i) => {
+                        tempObject.position.set(
+                            block.position[0] + 0.5,
+                            block.position[1] + 0.5 + yOffset,
+                            block.position[2] + 0.5
+                        );
+                        tempObject.rotation.set(0, 0, 0);
+                        tempObject.scale.set(...barSize);
+                        tempObject.updateMatrix();
+                        meshRef.current.setMatrixAt(i, tempObject.matrix);
+                    });
+                    meshRef.current.instanceMatrix.needsUpdate = true;
+                }
             });
-            ewBarMeshRef.current.instanceMatrix.needsUpdate = true;
         }
-    }, [blocks, connections, tempObject, pillarSize, barSize, barYOffset]);
+    }, [blocks, connections, tempObject, pillarSize, barSize, barYOffsets]);
 
     const handleClick = (event) => {
         event.stopPropagation();
@@ -653,10 +688,10 @@ function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '
                 <boxGeometry args={[1, 1, 1]} />
             </instancedMesh>
 
-            {/* NS 横杆（有 n/s 连接的实例） */}
+            {/* NS 横杆 - 下层 */}
             {nsCount > 0 && (
                 <instancedMesh
-                    ref={nsBarMeshRef}
+                    ref={nsBarLowMeshRef}
                     args={[null, null, nsCount]}
                     material={material}
                     onClick={handleClick}
@@ -668,10 +703,10 @@ function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '
                 </instancedMesh>
             )}
 
-            {/* EW 横杆（有 e/w 连接的实例） */}
+            {/* EW 横杆 - 下层 */}
             {ewCount > 0 && (
                 <instancedMesh
-                    ref={ewBarMeshRef}
+                    ref={ewBarLowMeshRef}
                     args={[null, null, ewCount]}
                     material={material}
                     onClick={handleClick}
@@ -682,6 +717,166 @@ function FenceWallInstancedBlocks({ blocks, blockType, onBlockClick, version = '
                     <boxGeometry args={[1, 1, 1]} />
                 </instancedMesh>
             )}
+
+            {/* NS 横杆 - 上层（仅 fence 双横杆） */}
+            {isFence && nsCount > 0 && (
+                <instancedMesh
+                    ref={nsBarHighMeshRef}
+                    args={[null, null, nsCount]}
+                    material={material}
+                    onClick={handleClick}
+                    frustumCulled={true}
+                    castShadow
+                    receiveShadow
+                >
+                    <boxGeometry args={[1, 1, 1]} />
+                </instancedMesh>
+            )}
+
+            {/* EW 横杆 - 上层（仅 fence 双横杆） */}
+            {isFence && ewCount > 0 && (
+                <instancedMesh
+                    ref={ewBarHighMeshRef}
+                    args={[null, null, ewCount]}
+                    material={material}
+                    onClick={handleClick}
+                    frustumCulled={true}
+                    castShadow
+                    receiveShadow
+                >
+                    <boxGeometry args={[1, 1, 1]} />
+                </instancedMesh>
+            )}
+        </group>
+    );
+}
+
+/**
+ * TorchLanternInstancedBlocks - 渲染火把/灯笼组合造型（两部件模式）
+ * Torch: 底部杆 + 顶部火焰头；Lantern: 顶部挂钩 + 灯体
+ */
+function TorchLanternInstancedBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
+    const part1MeshRef = useRef(); // 杆/挂钩
+    const part2MeshRef = useRef(); // 火焰头/灯体
+    const tempObject = useMemo(() => new THREE.Object3D(), []);
+
+    const isTorch = blockType.includes('torch') && !blockType.includes('torchflower');
+    const isLantern = blockType === 'lantern' || blockType === 'soul_lantern';
+
+    // 材质
+    const baseMaterial = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
+
+    // 火焰头/灯体材质（发光/半透明）
+    const glowMaterial = useMemo(() => {
+        if (isTorch) {
+            // 火焰头：暖黄色发光
+            const color = blockType === 'soul_torch' ? '#66ffff' : '#ffaa33';
+            return new THREE.MeshBasicMaterial({
+                color,
+                toneMapped: false,
+                transparent: false,
+            });
+        } else if (isLantern) {
+            // 灯体：半透明暖黄
+            const color = blockType === 'soul_lantern' ? '#66dddd' : '#e8a93c';
+            return new THREE.MeshBasicMaterial({
+                color,
+                toneMapped: false,
+                transparent: true,
+                opacity: 0.85,
+            });
+        }
+        return baseMaterial;
+    }, [isTorch, isLantern, blockType, baseMaterial]);
+
+    const shape = BLOCK_SHAPES[getBlockShape(blockType)];
+
+    useEffect(() => {
+        if (!part1MeshRef.current || !part2MeshRef.current || blocks.length === 0) return;
+
+        if (isTorch) {
+            // Torch: 杆 + 火焰头
+            blocks.forEach((block, i) => {
+                const baseX = block.position[0] + 0.5 + shape.offset[0];
+                const baseY = block.position[1] + 0.5 + shape.offset[1];
+                const baseZ = block.position[2] + 0.5 + shape.offset[2];
+
+                // 杆（0.125 x 0.5 x 0.125，中心 y+0.25）
+                tempObject.position.set(baseX, baseY + 0.25, baseZ);
+                tempObject.rotation.set(0, 0, 0);
+                tempObject.scale.set(0.125, 0.5, 0.125);
+                tempObject.updateMatrix();
+                part1MeshRef.current.setMatrixAt(i, tempObject.matrix);
+
+                // 火焰头（0.1875³，中心 y+0.6）
+                tempObject.position.set(baseX, baseY + 0.6, baseZ);
+                tempObject.scale.set(0.1875, 0.1875, 0.1875);
+                tempObject.updateMatrix();
+                part2MeshRef.current.setMatrixAt(i, tempObject.matrix);
+            });
+        } else if (isLantern) {
+            // Lantern: 挂钩 + 灯体
+            blocks.forEach((block, i) => {
+                const baseX = block.position[0] + 0.5 + shape.offset[0];
+                const baseY = block.position[1] + 0.5 + shape.offset[1];
+                const baseZ = block.position[2] + 0.5 + shape.offset[2];
+
+                // 挂钩（0.0625 x 0.25 x 0.0625，顶部 y+0.375）
+                tempObject.position.set(baseX, baseY + 0.375, baseZ);
+                tempObject.rotation.set(0, 0, 0);
+                tempObject.scale.set(0.0625, 0.25, 0.0625);
+                tempObject.updateMatrix();
+                part1MeshRef.current.setMatrixAt(i, tempObject.matrix);
+
+                // 灯体（0.375 x 0.4375 x 0.375，中心 y-0.0625）
+                tempObject.position.set(baseX, baseY - 0.0625, baseZ);
+                tempObject.scale.set(0.375, 0.4375, 0.375);
+                tempObject.updateMatrix();
+                part2MeshRef.current.setMatrixAt(i, tempObject.matrix);
+            });
+        }
+
+        part1MeshRef.current.instanceMatrix.needsUpdate = true;
+        part2MeshRef.current.instanceMatrix.needsUpdate = true;
+    }, [blocks, tempObject, isTorch, isLantern, shape]);
+
+    const handleClick = (event) => {
+        event.stopPropagation();
+        const instanceId = event.instanceId;
+        if (instanceId !== undefined && blocks[instanceId]) {
+            onBlockClick(blocks[instanceId].id, event);
+        }
+    };
+
+    if (blocks.length === 0) return null;
+
+    return (
+        <group>
+            {/* 部件1：杆/挂钩 */}
+            <instancedMesh
+                ref={part1MeshRef}
+                args={[null, null, blocks.length]}
+                material={baseMaterial}
+                onClick={handleClick}
+                frustumCulled={true}
+                castShadow
+                receiveShadow
+            >
+                <boxGeometry args={[1, 1, 1]} />
+            </instancedMesh>
+
+            {/* 部件2：火焰头/灯体 */}
+            <instancedMesh
+                ref={part2MeshRef}
+                args={[null, null, blocks.length]}
+                material={glowMaterial}
+                onClick={handleClick}
+                frustumCulled={true}
+                castShadow={false}
+                receiveShadow={false}
+            >
+                <boxGeometry args={[1, 1, 1]} />
+            </instancedMesh>
         </group>
     );
 }
@@ -1171,6 +1366,81 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         finalizeBlocksPosition(selectedBlockIds);
     };
 
+    // ============ 相机自动适配建筑（生成完成时聚焦） ============
+    const prevBlockCountRef = useRef(0);
+    useEffect(() => {
+        // 仅在方块数量从 0 变为非 0（新生成）或从非 0 变为 0（清空）时触发
+        const currentCount = visibleBlocks.length;
+        const prevCount = prevBlockCountRef.current;
+
+        if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
+            // 使用 useThree hook 需要在 Canvas 内，这里通过全局访问或延迟调用
+            // 延迟执行以确保 three.js 上下文已更新
+            setTimeout(() => {
+                try {
+                    // 尝试从全局获取 camera 和 controls（React Three Fiber 模式）
+                    const canvas = document.querySelector('canvas');
+                    if (!canvas || !canvas.__three) return;
+
+                    const camera = canvas.__three?.camera;
+                    const controls = canvas.__three?.controls;
+
+                    if (camera && visibleBlocks.length > 0) {
+                        // 计算建筑 bounds
+                        let minX = Infinity, minY = Infinity, minZ = Infinity;
+                        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+                        visibleBlocks.forEach(block => {
+                            const [x, y, z] = block.position;
+                            minX = Math.min(minX, x);
+                            minY = Math.min(minY, y);
+                            minZ = Math.min(minZ, z);
+                            maxX = Math.max(maxX, x + 1);
+                            maxY = Math.max(maxY, y + 1);
+                            maxZ = Math.max(maxZ, z + 1);
+                        });
+
+                        const centerX = (minX + maxX) / 2;
+                        const centerY = (minY + maxY) / 2;
+                        const centerZ = (minZ + maxZ) / 2;
+
+                        const sizeX = maxX - minX;
+                        const sizeY = maxY - minY;
+                        const sizeZ = maxZ - minZ;
+                        const maxDim = Math.max(sizeX, sizeY, sizeZ);
+
+                        // 相机位置：中心 + 斜上方
+                        const distance = maxDim * 1.6;
+                        const cameraX = centerX + distance * 0.7;
+                        const cameraY = centerY + distance * 0.8;
+                        const cameraZ = centerZ + distance * 0.7;
+
+                        camera.position.set(cameraX, cameraY, cameraZ);
+                        camera.lookAt(centerX, centerY, centerZ);
+
+                        // 更新 controls target（OrbitControls）
+                        if (controls && controls.target) {
+                            controls.target.set(centerX, centerY, centerZ);
+                            controls.update();
+                        }
+                    } else if (camera && visibleBlocks.length === 0) {
+                        // 清空后重置到默认视角
+                        camera.position.set(10, 10, 10);
+                        camera.lookAt(0, 0, 0);
+                        if (controls && controls.target) {
+                            controls.target.set(0, 0, 0);
+                            controls.update();
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Camera auto-focus failed:', err);
+                }
+            }, 100);
+        }
+
+        prevBlockCountRef.current = currentCount;
+    }, [visibleBlocks]);
+
     // Drag detection: prevent click after rotation
     const pointerDownPos = useRef({ x: 0, y: 0 });
     const isDraggingClick = useRef(false);
@@ -1299,6 +1569,23 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         [visibleBlocks, selectedBlockIds]
     );
 
+    // ============ 点光源（灯笼/火把照亮周围，≤10 个） ============
+    const lightSources = useMemo(() => {
+        const sources = [];
+        visibleBlocks.forEach(block => {
+            const cleanType = cleanBlockType(block.type);
+            if (cleanType === 'lantern' || cleanType === 'soul_lantern' ||
+                cleanType.includes('torch') && !cleanType.includes('torchflower')) {
+                sources.push({
+                    position: block.position,
+                    type: cleanType
+                });
+            }
+        });
+        // 限制 ≤10 个（性能）
+        return sources.slice(0, 10);
+    }, [visibleBlocks]);
+
     if (viewMode === 'blueprint') {
         const semanticGroups = new Map();
         semanticVoxels.forEach(v => {
@@ -1345,6 +1632,31 @@ export default function VoxelWorld({ version = '1.20.1' }) {
 
     return (
         <group onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
+            {/* 点光源（灯笼/火把） */}
+            {lightSources.map((source, idx) => {
+                const isSoul = source.type === 'soul_lantern' || source.type === 'soul_torch';
+                const isLantern = source.type === 'lantern' || source.type === 'soul_lantern';
+                const color = isSoul ? 0x66ddff : (isLantern ? 0xffbb66 : 0xffaa55);
+                const intensity = isLantern ? 0.9 : 0.8;
+                const yOffset = isLantern ? 0.3 : 0.5; // 灯笼稍低，火把稍高
+
+                return (
+                    <pointLight
+                        key={`light-${idx}`}
+                        position={[
+                            source.position[0] + 0.5,
+                            source.position[1] + yOffset,
+                            source.position[2] + 0.5
+                        ]}
+                        color={color}
+                        intensity={intensity}
+                        distance={8}
+                        decay={2}
+                        castShadow={false}
+                    />
+                );
+            })}
+
             {/* Ultra Performance Mode: Single mesh with vertex colors - includes ALL blocks */}
             {useUltraPerformance && (
                 <UltraPerformanceRenderer

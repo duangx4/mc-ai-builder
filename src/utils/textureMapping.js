@@ -4,6 +4,17 @@
  */
 
 /**
+ * 清洗方块类型名（去除 [properties] 后缀）
+ * @param {string} type - 原始方块类型（可能含 [facing=south] 等后缀）
+ * @returns {string} 清洗后的类型名
+ */
+export function cleanBlockType(type) {
+  if (!type) return type;
+  // 移除方括号及其内容（properties 后缀）
+  return type.replace(/\[.*\]$/, '');
+}
+
+/**
  * 根据版本返回纹理基础路径
  * @param {string} version - MC版本号，如 '1.20.1' 或 '1.21'
  * @returns {string} 纹理路径
@@ -932,12 +943,20 @@ export const FALLBACK_COLORS = {
     'crimson_fence': '#6f2828',
     'warped_fence': '#2a6e6e',
     'nether_brick_fence': '#2d1a1a',
+    'bamboo_fence': '#c4a84b',
+    'cherry_fence': '#e4baba',
+    'mangrove_fence': '#7a3f3f',
     'oak_fence_gate': '#b8945f',
     'spruce_fence_gate': '#5c4033',
     'birch_fence_gate': '#c8b77a',
     'jungle_fence_gate': '#9a6e4a',
     'acacia_fence_gate': '#ad5d32',
     'dark_oak_fence_gate': '#3d2817',
+    'crimson_fence_gate': '#6f2828',
+    'warped_fence_gate': '#2a6e6e',
+    'bamboo_fence_gate': '#c4a84b',
+    'cherry_fence_gate': '#e4baba',
+    'mangrove_fence_gate': '#7a3f3f',
     
     // Trapdoors
     'oak_trapdoor': '#b8945f',
