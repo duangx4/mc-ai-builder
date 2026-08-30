@@ -1064,6 +1064,53 @@ function WaterBlocks({ blocks, version = '1.20.1' }) {
  * - 共享 Atlas 材质（所有方块使用同一张大图）
  */
 function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
+    // 方块简化名 → 模板名映射表
+    const BLOCK_NAME_MAPPING = {
+        // 火把系列
+        'torch': 'template_torch',
+        'wall_torch': 'template_torch_wall',
+        'soul_torch': 'template_torch',
+        'soul_wall_torch': 'template_torch_wall',
+        'redstone_torch': 'template_torch',
+        'redstone_wall_torch': 'template_torch_wall',
+
+        // 灯笼系列
+        'lantern': 'template_lantern',
+        'soul_lantern': 'template_lantern',
+
+        // 栅栏门系列
+        'oak_fence_gate': 'template_fence_gate',
+        'spruce_fence_gate': 'template_fence_gate',
+        'birch_fence_gate': 'template_fence_gate',
+        'jungle_fence_gate': 'template_fence_gate',
+        'acacia_fence_gate': 'template_fence_gate',
+        'dark_oak_fence_gate': 'template_fence_gate',
+        'mangrove_fence_gate': 'template_fence_gate',
+        'cherry_fence_gate': 'template_fence_gate',
+        'bamboo_fence_gate': 'template_fence_gate',
+        'crimson_fence_gate': 'template_fence_gate',
+        'warped_fence_gate': 'template_fence_gate',
+
+        // 蜡烛系列
+        'candle': 'template_candle',
+        'white_candle': 'template_candle',
+        'orange_candle': 'template_candle',
+        'magenta_candle': 'template_candle',
+        'light_blue_candle': 'template_candle',
+        'yellow_candle': 'template_candle',
+        'lime_candle': 'template_candle',
+        'pink_candle': 'template_candle',
+        'gray_candle': 'template_candle',
+        'light_gray_candle': 'template_candle',
+        'cyan_candle': 'template_candle',
+        'purple_candle': 'template_candle',
+        'blue_candle': 'template_candle',
+        'brown_candle': 'template_candle',
+        'green_candle': 'template_candle',
+        'red_candle': 'template_candle',
+        'black_candle': 'template_candle',
+    };
+
     const [modelData, setModelData] = useState(null);
     const [atlasReady, setAtlasReady] = useState(false);
     const meshRef = useRef();
@@ -1075,18 +1122,26 @@ function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = 
 
     // 加载模型定义
     useEffect(() => {
+        const cleanType = cleanBlockType(blockType);
+        // 应用名字映射
+        const modelKey = BLOCK_NAME_MAPPING[cleanType] || cleanType;
+
         fetch('/minecraft-1.20.1/vanilla-block-models.json')
             .then(res => res.json())
             .then(data => {
-                const cleanType = cleanBlockType(blockType);
-                const modelDef = data[cleanType] || data[`template_${cleanType}`] || null;
-                setModelData(modelDef);
+                const model = data[modelKey];
+                if (!model) {
+                    console.warn(`Model not found for ${blockType} (tried ${modelKey})`);
+                    setModelData(null);
+                    return;
+                }
+                setModelData(model);
             })
             .catch(err => {
-                console.warn(`加载模型定义失败: ${blockType}`, err);
+                console.error(`Failed to load model for ${blockType}:`, err);
                 setModelData(null);
             });
-    }, [blockType]);
+    }, [blockType, BLOCK_NAME_MAPPING]);
 
     // 创建 Atlas 材质（全局共享）
     const material = useMemo(() => {
