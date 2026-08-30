@@ -1554,4 +1554,9 @@ const useStore = create(
     )
 );
 
+// Expose store to window for debugging
+if (typeof window !== 'undefined') {
+    window.__voxel_store = useStore;
+}
+
 export default useStore;
