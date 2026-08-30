@@ -1053,6 +1053,135 @@ function WaterBlocks({ blocks, version = '1.20.1' }) {
     );
 }
 
+/**
+ * VanillaMultiElementBlocks - 数据驱动的多元素方块渲染器
+ * 从 vanilla-block-models.json 读取原版方块几何定义，支持：
+ * - 多 element 拼装（锁链/铁栏杆/酿造台/切石机等）
+ * - element 旋转（锁链 45°/火把交叉等）
+ * - 自动实例化（同类型方块共享 geometry）
+ */
+function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
+    const [modelData, setModelData] = useState(null);
+    const meshRefs = useRef([]);
+    const tempObject = useMemo(() => new THREE.Object3D(), []);
+
+    // 加载模型定义
+    useEffect(() => {
+        fetch('/minecraft-1.20.1/vanilla-block-models.json')
+            .then(res => res.json())
+            .then(data => {
+                // 尝试多种可能的命名方式
+                const cleanType = cleanBlockType(blockType);
+                const modelDef = data[cleanType] || data[`template_${cleanType}`] || null;
+                setModelData(modelDef);
+            })
+            .catch(err => {
+                console.warn(`加载模型定义失败: ${blockType}`, err);
+                setModelData(null);
+            });
+    }, [blockType]);
+
+    // 获取或创建材质
+    const material = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
+
+    // 更新实例矩阵
+    useEffect(() => {
+        if (!modelData || !modelData.elements || blocks.length === 0) return;
+
+        modelData.elements.forEach((element, elemIdx) => {
+            const meshRef = meshRefs.current[elemIdx];
+            if (!meshRef) return;
+
+            blocks.forEach((block, blockIdx) => {
+                const baseX = block.position[0] + 0.5;
+                const baseY = block.position[1] + 0.5;
+                const baseZ = block.position[2] + 0.5;
+
+                // 计算 element 的尺寸和中心
+                const from = element.from || [0, 0, 0];
+                const to = element.to || [1, 1, 1];
+                const size = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+                const center = [
+                    from[0] + size[0] / 2,
+                    from[1] + size[1] / 2,
+                    from[2] + size[2] / 2
+                ];
+
+                // 应用偏移（坐标系：中心为 0.5, 0.5, 0.5）
+                const offsetX = center[0] - 0.5;
+                const offsetY = center[1] - 0.5;
+                const offsetZ = center[2] - 0.5;
+
+                tempObject.position.set(
+                    baseX + offsetX,
+                    baseY + offsetY,
+                    baseZ + offsetZ
+                );
+                tempObject.scale.set(size[0], size[1], size[2]);
+
+                // 处理旋转
+                if (element.rotation) {
+                    const { axis, angle, origin } = element.rotation;
+                    const radians = (angle * Math.PI) / 180;
+
+                    // 注意：MC 坐标系和 Three.js 坐标系的差异
+                    // MC: Y-up, X-right, Z-forward (south)
+                    // Three.js: Y-up, X-right, Z-forward (towards camera)
+                    if (axis === 'y') {
+                        tempObject.rotation.set(0, radians, 0);
+                    } else if (axis === 'x') {
+                        tempObject.rotation.set(radians, 0, 0);
+                    } else if (axis === 'z') {
+                        tempObject.rotation.set(0, 0, radians);
+                    }
+                } else {
+                    tempObject.rotation.set(0, 0, 0);
+                }
+
+                tempObject.updateMatrix();
+                meshRef.setMatrixAt(blockIdx, tempObject.matrix);
+            });
+
+            meshRef.instanceMatrix.needsUpdate = true;
+        });
+    }, [blocks, modelData, tempObject]);
+
+    // 点击处理
+    const handleClick = (event) => {
+        event.stopPropagation();
+        const instanceId = event.instanceId;
+        if (instanceId !== undefined && blocks[instanceId]) {
+            onBlockClick(blocks[instanceId].id, event);
+        }
+    };
+
+    if (!modelData || !modelData.elements || blocks.length === 0) return null;
+
+    return (
+        <group>
+            {modelData.elements.map((element, elemIdx) => {
+                // 为每个 element 创建一个 InstancedMesh
+                return (
+                    <instancedMesh
+                        key={elemIdx}
+                        ref={ref => {
+                            if (ref) meshRefs.current[elemIdx] = ref;
+                        }}
+                        args={[null, null, blocks.length]}
+                        material={material}
+                        onClick={handleClick}
+                        frustumCulled={true}
+                        castShadow
+                        receiveShadow
+                    >
+                        <boxGeometry args={[1, 1, 1]} />
+                    </instancedMesh>
+                );
+            })}
+        </group>
+    );
+}
+
 // ============ ULTRA PERFORMANCE MODE ============
 // Single mesh with vertex colors - NO textures, minimal draw calls
 // For 10,000+ blocks where FPS is more important than visual quality
@@ -1554,15 +1683,55 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         return { stairBlocks: stairs, waterBlocks: water, regularBlocks: regular };
     }, [visibleBlocks]);
 
-    const blocksByTexture = useMemo(() => {
-        const groups = new Map();
+    // 加载方块分类数据（用于判断是否使用 vanilla 模型渲染器）
+    const [vanillaBlockTypes, setVanillaBlockTypes] = useState(new Set());
+    useEffect(() => {
+        fetch('/minecraft-1.20.1/blocks-classification.json')
+            .then(res => res.json())
+            .then(cls => {
+                const types = new Set([
+                    ...cls.multiElement,
+                    ...cls.rotation,
+                    ...cls.simpleShape
+                ].filter(t => {
+                    // 排除已有专门渲染器的类型
+                    // fence/wall 用 FenceWallInstancedBlocks（连接逻辑）
+                    // cross 植物用 CrossInstancedBlocks
+                    if (t.includes('_fence') || t.includes('_wall')) return false;
+                    if (t.includes('_slab') || t.includes('_stairs')) return false;
+                    return true;
+                }));
+                setVanillaBlockTypes(types);
+            })
+            .catch(err => console.warn('加载方块分类失败:', err));
+    }, []);
+
+    const { vanillaBlocks, texturedBlocks } = useMemo(() => {
+        const vanilla = new Map();
+        const textured = new Map();
+
         regularBlocks.forEach(block => {
+            const cleanType = cleanBlockType(block.type);
             const textureKey = ALIASES[block.type] || block.type;
-            if (!groups.has(textureKey)) groups.set(textureKey, []);
-            groups.get(textureKey).push(block);
+
+            // 检查是否应使用 vanilla 模型渲染器
+            const useVanillaModel = vanillaBlockTypes.has(cleanType) ||
+                                   vanillaBlockTypes.has(`template_${cleanType}`);
+
+            if (useVanillaModel) {
+                if (!vanilla.has(cleanType)) vanilla.set(cleanType, []);
+                vanilla.get(cleanType).push(block);
+            } else {
+                if (!textured.has(textureKey)) textured.set(textureKey, []);
+                textured.get(textureKey).push(block);
+            }
         });
-        return groups;
-    }, [regularBlocks]);
+
+        return { vanillaBlocks: vanilla, texturedBlocks: textured };
+    }, [regularBlocks, vanillaBlockTypes]);
+
+    // 兼容旧代码
+    const blocksByTexture = texturedBlocks;
 
     const selectedBlocks = useMemo(() =>
         visibleBlocks.filter(b => selectedBlockIds.includes(b.id)),
@@ -1674,6 +1843,17 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                     blockType={blocksInGroup[0]?.type || textureKey}
                     onBlockClick={safeSelectBlock}
                     positionMap={positionMap}
+                    version={version}
+                />
+            ))}
+
+            {/* Vanilla Multi-Element Blocks: 数据驱动渲染（锁链/酿造台/切石机/火把/灯笼等） */}
+            {!useUltraPerformance && Array.from(vanillaBlocks.entries()).map(([blockType, blocksInGroup]) => (
+                <VanillaMultiElementBlocks
+                    key={blockType}
+                    blocks={blocksInGroup}
+                    blockType={blockType}
+                    onBlockClick={safeSelectBlock}
                     version={version}
                 />
             ))}
