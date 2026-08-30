@@ -1366,81 +1366,6 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         finalizeBlocksPosition(selectedBlockIds);
     };
 
-    // ============ 相机自动适配建筑（生成完成时聚焦） ============
-    const prevBlockCountRef = useRef(0);
-    useEffect(() => {
-        // 仅在方块数量从 0 变为非 0（新生成）或从非 0 变为 0（清空）时触发
-        const currentCount = visibleBlocks.length;
-        const prevCount = prevBlockCountRef.current;
-
-        if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
-            // 使用 useThree hook 需要在 Canvas 内，这里通过全局访问或延迟调用
-            // 延迟执行以确保 three.js 上下文已更新
-            setTimeout(() => {
-                try {
-                    // 尝试从全局获取 camera 和 controls（React Three Fiber 模式）
-                    const canvas = document.querySelector('canvas');
-                    if (!canvas || !canvas.__three) return;
-
-                    const camera = canvas.__three?.camera;
-                    const controls = canvas.__three?.controls;
-
-                    if (camera && visibleBlocks.length > 0) {
-                        // 计算建筑 bounds
-                        let minX = Infinity, minY = Infinity, minZ = Infinity;
-                        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-                        visibleBlocks.forEach(block => {
-                            const [x, y, z] = block.position;
-                            minX = Math.min(minX, x);
-                            minY = Math.min(minY, y);
-                            minZ = Math.min(minZ, z);
-                            maxX = Math.max(maxX, x + 1);
-                            maxY = Math.max(maxY, y + 1);
-                            maxZ = Math.max(maxZ, z + 1);
-                        });
-
-                        const centerX = (minX + maxX) / 2;
-                        const centerY = (minY + maxY) / 2;
-                        const centerZ = (minZ + maxZ) / 2;
-
-                        const sizeX = maxX - minX;
-                        const sizeY = maxY - minY;
-                        const sizeZ = maxZ - minZ;
-                        const maxDim = Math.max(sizeX, sizeY, sizeZ);
-
-                        // 相机位置：中心 + 斜上方
-                        const distance = maxDim * 1.6;
-                        const cameraX = centerX + distance * 0.7;
-                        const cameraY = centerY + distance * 0.8;
-                        const cameraZ = centerZ + distance * 0.7;
-
-                        camera.position.set(cameraX, cameraY, cameraZ);
-                        camera.lookAt(centerX, centerY, centerZ);
-
-                        // 更新 controls target（OrbitControls）
-                        if (controls && controls.target) {
-                            controls.target.set(centerX, centerY, centerZ);
-                            controls.update();
-                        }
-                    } else if (camera && visibleBlocks.length === 0) {
-                        // 清空后重置到默认视角
-                        camera.position.set(10, 10, 10);
-                        camera.lookAt(0, 0, 0);
-                        if (controls && controls.target) {
-                            controls.target.set(0, 0, 0);
-                            controls.update();
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Camera auto-focus failed:', err);
-                }
-            }, 100);
-        }
-
-        prevBlockCountRef.current = currentCount;
-    }, [visibleBlocks]);
-
     // Drag detection: prevent click after rotation
     const pointerDownPos = useRef({ x: 0, y: 0 });
     const isDraggingClick = useRef(false);
@@ -1536,6 +1461,81 @@ export default function VoxelWorld({ version = '1.20.1' }) {
 
         return { visibleBlocks: visible, positionMap: posMap };
     }, [blocks]);
+
+    // ============ 相机自动适配建筑（生成完成时聚焦） ============
+    const prevBlockCountRef = useRef(0);
+    useEffect(() => {
+        // 仅在方块数量从 0 变为非 0（新生成）或从非 0 变为 0（清空）时触发
+        const currentCount = visibleBlocks.length;
+        const prevCount = prevBlockCountRef.current;
+
+        if ((prevCount === 0 && currentCount > 0) || (prevCount > 0 && currentCount === 0)) {
+            // 使用 useThree hook 需要在 Canvas 内，这里通过全局访问或延迟调用
+            // 延迟执行以确保 three.js 上下文已更新
+            setTimeout(() => {
+                try {
+                    // 尝试从全局获取 camera 和 controls（React Three Fiber 模式）
+                    const canvas = document.querySelector('canvas');
+                    if (!canvas || !canvas.__three) return;
+
+                    const camera = canvas.__three?.camera;
+                    const controls = canvas.__three?.controls;
+
+                    if (camera && visibleBlocks.length > 0) {
+                        // 计算建筑 bounds
+                        let minX = Infinity, minY = Infinity, minZ = Infinity;
+                        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+                        visibleBlocks.forEach(block => {
+                            const [x, y, z] = block.position;
+                            minX = Math.min(minX, x);
+                            minY = Math.min(minY, y);
+                            minZ = Math.min(minZ, z);
+                            maxX = Math.max(maxX, x + 1);
+                            maxY = Math.max(maxY, y + 1);
+                            maxZ = Math.max(maxZ, z + 1);
+                        });
+
+                        const centerX = (minX + maxX) / 2;
+                        const centerY = (minY + maxY) / 2;
+                        const centerZ = (minZ + maxZ) / 2;
+
+                        const sizeX = maxX - minX;
+                        const sizeY = maxY - minY;
+                        const sizeZ = maxZ - minZ;
+                        const maxDim = Math.max(sizeX, sizeY, sizeZ);
+
+                        // 相机位置：中心 + 斜上方
+                        const distance = maxDim * 1.6;
+                        const cameraX = centerX + distance * 0.7;
+                        const cameraY = centerY + distance * 0.8;
+                        const cameraZ = centerZ + distance * 0.7;
+
+                        camera.position.set(cameraX, cameraY, cameraZ);
+                        camera.lookAt(centerX, centerY, centerZ);
+
+                        // 更新 controls target（OrbitControls）
+                        if (controls && controls.target) {
+                            controls.target.set(centerX, centerY, centerZ);
+                            controls.update();
+                        }
+                    } else if (camera && visibleBlocks.length === 0) {
+                        // 清空后重置到默认视角
+                        camera.position.set(10, 10, 10);
+                        camera.lookAt(0, 0, 0);
+                        if (controls && controls.target) {
+                            controls.target.set(0, 0, 0);
+                            controls.update();
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Camera auto-focus failed:', err);
+                }
+            }, 100);
+        }
+
+        prevBlockCountRef.current = currentCount;
+    }, [visibleBlocks]);
 
     // Removed Auto-center Logic (centerOffset is gone)
 
