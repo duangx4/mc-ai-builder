@@ -1065,50 +1065,11 @@ function WaterBlocks({ blocks, version = '1.20.1' }) {
  */
 function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
     // 方块简化名 → 模板名映射表
+    // 方块名称映射：现在数据文件已包含实际模型（不再使用 template_*）
+    // 保留此映射表用于未来特殊情况，但目前为空（方块名 = 模型名）
     const BLOCK_NAME_MAPPING = {
-        // 火把系列
-        'torch': 'template_torch',
-        'wall_torch': 'template_torch_wall',
-        'soul_torch': 'template_torch',
-        'soul_wall_torch': 'template_torch_wall',
-        'redstone_torch': 'template_torch',
-        'redstone_wall_torch': 'template_torch_wall',
-
-        // 灯笼系列
-        'lantern': 'template_lantern',
-        'soul_lantern': 'template_lantern',
-
-        // 栅栏门系列
-        'oak_fence_gate': 'template_fence_gate',
-        'spruce_fence_gate': 'template_fence_gate',
-        'birch_fence_gate': 'template_fence_gate',
-        'jungle_fence_gate': 'template_fence_gate',
-        'acacia_fence_gate': 'template_fence_gate',
-        'dark_oak_fence_gate': 'template_fence_gate',
-        'mangrove_fence_gate': 'template_fence_gate',
-        'cherry_fence_gate': 'template_fence_gate',
-        'bamboo_fence_gate': 'template_fence_gate',
-        'crimson_fence_gate': 'template_fence_gate',
-        'warped_fence_gate': 'template_fence_gate',
-
-        // 蜡烛系列
-        'candle': 'template_candle',
-        'white_candle': 'template_candle',
-        'orange_candle': 'template_candle',
-        'magenta_candle': 'template_candle',
-        'light_blue_candle': 'template_candle',
-        'yellow_candle': 'template_candle',
-        'lime_candle': 'template_candle',
-        'pink_candle': 'template_candle',
-        'gray_candle': 'template_candle',
-        'light_gray_candle': 'template_candle',
-        'cyan_candle': 'template_candle',
-        'purple_candle': 'template_candle',
-        'blue_candle': 'template_candle',
-        'brown_candle': 'template_candle',
-        'green_candle': 'template_candle',
-        'red_candle': 'template_candle',
-        'black_candle': 'template_candle',
+        // 修复后的转换脚本已支持 parent 继承链解析
+        // 所有方块现在直接使用实际模型名（torch, lantern, candle, etc.）
     };
 
     const [modelData, setModelData] = useState(null);
