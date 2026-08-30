@@ -1488,19 +1488,6 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         version
     });
 
-    // TEMPORARY: Force render a test cube
-    if (blocks.length > 0) {
-        console.log('[VoxelWorld] TEST: Rendering test cube');
-        return (
-            <group>
-                <mesh position={[0, 5, 0]}>
-                    <boxGeometry args={[5, 5, 5]} />
-                    <meshBasicMaterial color="red" />
-                </mesh>
-            </group>
-        );
-    }
-
     // Transform Gizmo Logic
     const gizmoRef = useRef();
     const gizmoAnchorRef = useRef();
