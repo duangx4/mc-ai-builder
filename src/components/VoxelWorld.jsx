@@ -7,6 +7,7 @@ import useStore from '../store/useStore';
 import { TransformControls } from '@react-three/drei';
 import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP, cleanBlockType } from '../utils/textureMapping';
 import { inferConnections } from '../utils/blockConnections';
+import { loadAtlas, createAtlasMaterial, resolveTextureRef, getTextureUV, mapFaceUVToAtlas, isAtlasLoaded } from '../utils/atlasMaterial';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
 // 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
@@ -1054,23 +1055,29 @@ function WaterBlocks({ blocks, version = '1.20.1' }) {
 }
 
 /**
- * VanillaMultiElementBlocks - 数据驱动的多元素方块渲染器
+ * VanillaMultiElementBlocks - 数据驱动的多元素方块渲染器（Atlas + Per-face UV）
  * 从 vanilla-block-models.json 读取原版方块几何定义，支持：
  * - 多 element 拼装（锁链/铁栏杆/酿造台/切石机等）
+ * - Per-face UV 映射（每个面独立贴图坐标）
+ * - 多贴图引用（不同面使用不同贴图）
  * - element 旋转（锁链 45°/火把交叉等）
- * - 自动实例化（同类型方块共享 geometry）
+ * - 共享 Atlas 材质（所有方块使用同一张大图）
  */
 function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = '1.20.1' }) {
     const [modelData, setModelData] = useState(null);
-    const meshRefs = useRef([]);
-    const tempObject = useMemo(() => new THREE.Object3D(), []);
+    const [atlasReady, setAtlasReady] = useState(false);
+    const meshRef = useRef();
+
+    // 加载 Atlas
+    useEffect(() => {
+        loadAtlas(version).then(() => setAtlasReady(true));
+    }, [version]);
 
     // 加载模型定义
     useEffect(() => {
         fetch('/minecraft-1.20.1/vanilla-block-models.json')
             .then(res => res.json())
             .then(data => {
-                // 尝试多种可能的命名方式
                 const cleanType = cleanBlockType(blockType);
                 const modelDef = data[cleanType] || data[`template_${cleanType}`] || null;
                 setModelData(modelDef);
@@ -1081,104 +1088,160 @@ function VanillaMultiElementBlocks({ blocks, blockType, onBlockClick, version = 
             });
     }, [blockType]);
 
-    // 获取或创建材质
-    const material = useMemo(() => getOrCreateMaterial(blockType, version), [blockType, version]);
+    // 创建 Atlas 材质（全局共享）
+    const material = useMemo(() => {
+        if (!atlasReady) return null;
+        return createAtlasMaterial();
+    }, [atlasReady]);
 
-    // 更新实例矩阵
-    useEffect(() => {
-        if (!modelData || !modelData.elements || blocks.length === 0) return;
+    // 构建几何体（手动构建 BufferGeometry，支持 per-face UV）
+    const geometry = useMemo(() => {
+        if (!modelData || !modelData.elements || blocks.length === 0 || !atlasReady) return null;
 
-        modelData.elements.forEach((element, elemIdx) => {
-            const meshRef = meshRefs.current[elemIdx];
-            if (!meshRef) return;
+        const positions = [];
+        const uvs = [];
+        const normals = [];
+        const indices = [];
+        let vertexOffset = 0;
 
-            blocks.forEach((block, blockIdx) => {
-                const baseX = block.position[0] + 0.5;
-                const baseY = block.position[1] + 0.5;
-                const baseZ = block.position[2] + 0.5;
+        // 为每个方块实例生成几何体
+        blocks.forEach(block => {
+            const [bx, by, bz] = block.position;
 
-                // 计算 element 的尺寸和中心
+            // 为每个 element 生成几何体
+            modelData.elements.forEach(element => {
                 const from = element.from || [0, 0, 0];
                 const to = element.to || [1, 1, 1];
-                const size = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
-                const center = [
-                    from[0] + size[0] / 2,
-                    from[1] + size[1] / 2,
-                    from[2] + size[2] / 2
-                ];
+                const faces = element.faces || {};
 
-                // 应用偏移（坐标系：中心为 0.5, 0.5, 0.5）
-                const offsetX = center[0] - 0.5;
-                const offsetY = center[1] - 0.5;
-                const offsetZ = center[2] - 0.5;
-
-                tempObject.position.set(
-                    baseX + offsetX,
-                    baseY + offsetY,
-                    baseZ + offsetZ
-                );
-                tempObject.scale.set(size[0], size[1], size[2]);
-
-                // 处理旋转
+                // 处理旋转（如果有）
+                let rotationMatrix = null;
                 if (element.rotation) {
                     const { axis, angle, origin } = element.rotation;
                     const radians = (angle * Math.PI) / 180;
+                    rotationMatrix = new THREE.Matrix4();
+                    const rotOrigin = new THREE.Vector3(
+                        origin ? origin[0] : 0.5,
+                        origin ? origin[1] : 0.5,
+                        origin ? origin[2] : 0.5
+                    );
 
-                    // 注意：MC 坐标系和 Three.js 坐标系的差异
-                    // MC: Y-up, X-right, Z-forward (south)
-                    // Three.js: Y-up, X-right, Z-forward (towards camera)
-                    if (axis === 'y') {
-                        tempObject.rotation.set(0, radians, 0);
-                    } else if (axis === 'x') {
-                        tempObject.rotation.set(radians, 0, 0);
-                    } else if (axis === 'z') {
-                        tempObject.rotation.set(0, 0, radians);
-                    }
-                } else {
-                    tempObject.rotation.set(0, 0, 0);
+                    // 平移到原点 -> 旋转 -> 平移回来
+                    const axisVector = axis === 'x' ? new THREE.Vector3(1, 0, 0) :
+                                      axis === 'y' ? new THREE.Vector3(0, 1, 0) :
+                                      new THREE.Vector3(0, 0, 1);
+
+                    rotationMatrix.makeRotationAxis(axisVector, radians);
                 }
 
-                tempObject.updateMatrix();
-                meshRef.setMatrixAt(blockIdx, tempObject.matrix);
+                // 生成 6 个面（如果在 JSON 中定义了）
+                const faceConfigs = [
+                    { name: 'north', normal: [0, 0, -1], vertices: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]] },
+                    { name: 'south', normal: [0, 0, 1], vertices: [[1, 0, 1], [0, 0, 1], [0, 1, 1], [1, 1, 1]] },
+                    { name: 'west', normal: [-1, 0, 0], vertices: [[0, 0, 1], [0, 0, 0], [0, 1, 0], [0, 1, 1]] },
+                    { name: 'east', normal: [1, 0, 0], vertices: [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]] },
+                    { name: 'up', normal: [0, 1, 0], vertices: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
+                    { name: 'down', normal: [0, -1, 0], vertices: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] }
+                ];
+
+                faceConfigs.forEach(({ name, normal, vertices: faceVerts }) => {
+                    const face = faces[name];
+                    if (!face) return; // 如果这个面没有定义，跳过
+
+                    // 解析贴图引用
+                    const texPath = resolveTextureRef(face.texture, modelData.textures || {}, blockType);
+                    if (!texPath) {
+                        console.warn(`无法解析贴图引用: ${face.texture} for ${blockType}`);
+                        return;
+                    }
+
+                    // 获取贴图在 atlas 上的 UV 坐标
+                    const atlasUV = getTextureUV(texPath);
+                    const faceUV = face.uv || [0, 0, 16, 16]; // 默认满贴图
+
+                    // 计算最终的 UV 坐标
+                    const finalUV = mapFaceUVToAtlas(faceUV, atlasUV);
+
+                    // 生成 4 个顶点
+                    const verts = faceVerts.map(([vx, vy, vz]) => {
+                        // 将相对坐标映射到 element 的实际位置
+                        let x = from[0] + (to[0] - from[0]) * vx;
+                        let y = from[1] + (to[1] - from[1]) * vy;
+                        let z = from[2] + (to[2] - from[2]) * vz;
+
+                        // 应用旋转（如果有）
+                        if (rotationMatrix && element.rotation) {
+                            const origin = element.rotation.origin || [0.5, 0.5, 0.5];
+                            const vec = new THREE.Vector3(x - origin[0], y - origin[1], z - origin[2]);
+                            vec.applyMatrix4(rotationMatrix);
+                            x = vec.x + origin[0];
+                            y = vec.y + origin[1];
+                            z = vec.z + origin[2];
+                        }
+
+                        // 转换到世界坐标
+                        return [bx + x, by + y, bz + z];
+                    });
+
+                    // 添加顶点位置
+                    verts.forEach(v => positions.push(...v));
+
+                    // 添加法线（4 个顶点共享同一个法线）
+                    for (let i = 0; i < 4; i++) {
+                        normals.push(...normal);
+                    }
+
+                    // 添加 UV 坐标（4 个顶点的 UV）
+                    const [u0, v0, u1, v1] = finalUV;
+                    uvs.push(u0, v0);  // 左下
+                    uvs.push(u1, v0);  // 右下
+                    uvs.push(u1, v1);  // 右上
+                    uvs.push(u0, v1);  // 左上
+
+                    // 添加索引（2 个三角形）
+                    indices.push(
+                        vertexOffset, vertexOffset + 1, vertexOffset + 2,
+                        vertexOffset, vertexOffset + 2, vertexOffset + 3
+                    );
+                    vertexOffset += 4;
+                });
             });
-
-            meshRef.instanceMatrix.needsUpdate = true;
         });
-    }, [blocks, modelData, tempObject]);
 
-    // 点击处理
+        // 创建 BufferGeometry
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geo.setIndex(indices);
+        geo.computeBoundingSphere();
+
+        return geo;
+    }, [blocks, modelData, atlasReady]);
+
+    // 点击处理（简化版，因为不再使用 instancedMesh）
     const handleClick = (event) => {
         event.stopPropagation();
-        const instanceId = event.instanceId;
-        if (instanceId !== undefined && blocks[instanceId]) {
-            onBlockClick(blocks[instanceId].id, event);
+        if (blocks.length > 0 && onBlockClick) {
+            // 简化：点击任何位置都返回第一个方块
+            // TODO: 实现精确的 raycasting 来确定点击了哪个方块
+            onBlockClick(blocks[0].id, event);
         }
     };
 
-    if (!modelData || !modelData.elements || blocks.length === 0) return null;
+    if (!atlasReady || !modelData || !modelData.elements || blocks.length === 0 || !geometry || !material) {
+        return null;
+    }
 
     return (
-        <group>
-            {modelData.elements.map((element, elemIdx) => {
-                // 为每个 element 创建一个 InstancedMesh
-                return (
-                    <instancedMesh
-                        key={elemIdx}
-                        ref={ref => {
-                            if (ref) meshRefs.current[elemIdx] = ref;
-                        }}
-                        args={[null, null, blocks.length]}
-                        material={material}
-                        onClick={handleClick}
-                        frustumCulled={true}
-                        castShadow
-                        receiveShadow
-                    >
-                        <boxGeometry args={[1, 1, 1]} />
-                    </instancedMesh>
-                );
-            })}
-        </group>
+        <mesh
+            ref={meshRef}
+            geometry={geometry}
+            material={material}
+            onClick={handleClick}
+            castShadow
+            receiveShadow
+        />
     );
 }
 

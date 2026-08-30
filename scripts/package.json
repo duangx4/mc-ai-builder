@@ -1,0 +1,15 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "description": "MC Atlas Builder Scripts",
+  "type": "module",
+  "scripts": {
+    "build-atlas": "node build-texture-atlas-jimp.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jimp": "^1.6.1"
+  }
+}
