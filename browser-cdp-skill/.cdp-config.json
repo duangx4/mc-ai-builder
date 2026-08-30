@@ -1,0 +1,12 @@
+{
+  "edgePath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "userDataDir": "C:\\Users\\21972\\.openclaw\\workspace-agent-401e4ca1\\edge-cdp-profile",
+  "cdpPort": 9222,
+  "defaultUrl": "http://localhost:5177",
+  "multimodalModel": {
+    "provider": "luna",
+    "model": "gpt-5.6-terra",
+    "baseUrl": "https://platform.lantian.pro/v1",
+    "apiKeyPath": "C:/Users/21972/.openclaw/agents/agent-401e4ca1/agent/models.json"
+  }
+}
