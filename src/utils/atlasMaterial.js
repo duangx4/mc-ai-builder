@@ -59,7 +59,7 @@ export function createAtlasMaterial() {
     return new THREE.MeshLambertMaterial({
         map: atlasTexture,
         transparent: true,
-        alphaTest: 0.1,
+        alphaTest: 0.5,  // 提高到 0.5，过滤半透明像素
         side: THREE.FrontSide
     });
 }
@@ -116,7 +116,9 @@ export function getTextureUV(texturePath) {
         throw new Error('Atlas UV map not loaded.');
     }
 
-    const entry = atlasUVMap.textures[texturePath];
+    // 去掉 minecraft: 前缀（如果有）
+    const cleanPath = texturePath.replace(/^minecraft:/, '');
+    const entry = atlasUVMap.textures[cleanPath];
 
     if (!entry) {
         console.warn(`⚠️  贴图未在 atlas 中找到: ${texturePath}, 使用默认UV`);
