@@ -120,6 +120,9 @@ function MCModelInstancedBlocks({ blocks, blockType, positionMap, material, onBl
                             // 设置几何体
                             meshRef.geometry = geometry;
 
+                            // 显示 mesh（几何体加载完成后才显示，避免红色占位方块）
+                            meshRef.visible = true;
+
                             // 更新所有实例的变换矩阵
                             groupBlocks.forEach((block, i) => {
                                 tempObject.position.set(
