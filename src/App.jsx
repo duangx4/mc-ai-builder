@@ -3438,6 +3438,13 @@ ${finalCode}
               camera: state.camera.position,
               renderer: !!state.gl
             });
+
+            // 修复：触发 resize 事件强制 R3F 渲染循环启动
+            // 这解决了初始加载时画布黑屏的问题
+            setTimeout(() => {
+              window.dispatchEvent(new Event('resize'));
+              console.log('[Canvas] Triggered resize to kickstart rendering');
+            }, 100);
           }}
         >
           <color attach="background" args={[isDayMode ? '#a8d5f0' : '#0a0a0a']} />
