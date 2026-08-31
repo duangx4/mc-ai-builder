@@ -184,6 +184,7 @@ function MCModelInstancedBlocks({ blocks, blockType, positionMap, material, onBl
                             frustumCulled={true}
                             castShadow
                             receiveShadow
+                            visible={false}
                         >
                             {/* 临时占位几何体，实际几何体在 useEffect 中异步设置 */}
                             <boxGeometry args={[0.1, 0.1, 0.1]} />
