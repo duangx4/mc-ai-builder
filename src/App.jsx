@@ -22,6 +22,7 @@ import { applyCodeEdit } from './utils/codeEditor';
 import { agentGenerateV2 } from './utils/twoStepAI';
 import { setAgentDebugMode } from './utils/agentLoopV2';
 import DevConsoleModal from './components/DevConsoleModal';
+import DebugPanel from './components/DebugPanel';
 import { loadSettings } from './utils/settingsSchema';
 import { generateWithSmartEngine } from './utils/smartEngine';
 
@@ -314,6 +315,7 @@ function App() {
   const [toasts, setToasts] = useState([]);
   // devLogs is now in useStore for persistence
   const [isDevConsoleOpen, setIsDevConsoleOpen] = useState(false); // Dev console modal visibility
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false); // Debug panel visibility
   const [attachedImages, setAttachedImages] = useState([]); // User uploaded images for Vision API (max 3)
   const [viewingImage, setViewingImage] = useState(null); // Image URL for fullscreen viewer
   const [isProjectionOpen, setIsProjectionOpen] = useState(false); // Projection viewer modal
@@ -3603,20 +3605,36 @@ ${finalCode}
       />
 
       {/* Developer Console Toggle Button (Only specific to Debug Mode) */}
+      {/* Debug Mode Buttons */}
       {apiSettings.debugMode && (
-        <button
-          onClick={() => setIsDevConsoleOpen(prev => !prev)}
-          className={`fixed bottom-24 right-6 z-[9000] p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 ${isDevConsoleOpen
-            ? 'bg-orange-500 text-white shadow-orange-500/50 rotate-0'
-            : 'bg-neutral-800 text-neutral-400 border border-white/10 hover:text-white hover:border-orange-500/50'
-            }`}
-          title="Toggle Developer Console"
-        >
-          <Terminal size={20} />
-          {devLogs.length > 0 && !isDevConsoleOpen && (
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          )}
-        </button>
+        <>
+          {/* Developer Console */}
+          <button
+            onClick={() => setIsDevConsoleOpen(prev => !prev)}
+            className={`fixed bottom-24 right-6 z-[9000] p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 ${isDevConsoleOpen
+              ? 'bg-orange-500 text-white shadow-orange-500/50 rotate-0'
+              : 'bg-neutral-800 text-neutral-400 border border-white/10 hover:text-white hover:border-orange-500/50'
+              }`}
+            title="Toggle Developer Console"
+          >
+            <Terminal size={20} />
+            {devLogs.length > 0 && !isDevConsoleOpen && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            )}
+          </button>
+
+          {/* Debug Panel */}
+          <button
+            onClick={() => setIsDebugPanelOpen(prev => !prev)}
+            className={`fixed bottom-24 right-20 z-[9000] p-3 rounded-full shadow-2xl transition-all duration-200 hover:scale-110 ${isDebugPanelOpen
+              ? 'bg-purple-500 text-white shadow-purple-500/50 rotate-0'
+              : 'bg-neutral-800 text-neutral-400 border border-white/10 hover:text-white hover:border-purple-500/50'
+              }`}
+            title="Toggle Debug Panel (CDP, Store, Performance)"
+          >
+            <Wrench size={20} />
+          </button>
+        </>
       )}
 
       {/* Developer Console Modal - shows complete AI conversation */}
@@ -3625,6 +3643,12 @@ ${finalCode}
         onClose={() => setIsDevConsoleOpen(false)}
         logs={devLogs}
         onClear={clearDevLogs}
+      />
+
+      {/* Debug Panel - enhanced debugging tools */}
+      <DebugPanel
+        isOpen={isDebugPanelOpen}
+        onClose={() => setIsDebugPanelOpen(false)}
       />
 
       {/* Block Tools Panel - appears when blocks are selected */}
