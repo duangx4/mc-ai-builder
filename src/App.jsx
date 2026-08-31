@@ -3389,56 +3389,57 @@ ${finalCode}
       >
 
         {/* HUD Overlay */}
-        <div className="absolute top-6 left-6 z-10 flex gap-2">
-          <div className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 pointer-events-none">
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 flex flex-wrap gap-2 max-w-[calc(100%-8rem)]">
+          <div className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 pointer-events-none">
             <Layers size={12} className="text-orange-400" />
-            <span>{t('blocks')}: {blocks.length}</span>
+            <span className="hidden sm:inline">{t('blocks')}:</span>
+            <span>{blocks.length}</span>
           </div>
           <button
             onClick={() => setIsDayMode(!isDayMode)}
-            className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 hover:text-white hover:border-orange-500/50 transition-all"
+            className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 hover:text-white hover:border-orange-500/50 transition-all"
           >
             {isDayMode ? <Sun size={14} className="text-yellow-400" /> : <Moon size={14} className="text-blue-400" />}
-            <span>{isDayMode ? t('day') : t('night')}</span>
+            <span className="hidden sm:inline">{isDayMode ? t('day') : t('night')}</span>
           </button>
 
           <button
             onClick={() => setViewMode(viewMode === 'mc' ? 'blueprint' : 'mc')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${viewMode === 'blueprint'
+            className={`flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${viewMode === 'blueprint'
               ? 'bg-blue-500/20 border-blue-500/50 text-blue-200'
               : 'bg-neutral-900/80 border-white/10 text-neutral-400 hover:text-white'
               }`}
           >
             <Layers size={14} className={viewMode === 'blueprint' ? "text-blue-400" : "text-neutral-400"} />
-            <span>{viewMode === 'blueprint' ? t('blueprint') : t('minecraft')}</span>
+            <span className="hidden sm:inline">{viewMode === 'blueprint' ? t('blueprint') : t('minecraft')}</span>
           </button>
 
           <button
             onClick={() => setIsProjectionOpen(true)}
-            className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 hover:text-white hover:border-orange-500/50 transition-all"
+            className="flex items-center gap-2 bg-neutral-900/80 backdrop-blur px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 text-xs font-medium text-neutral-400 hover:text-white hover:border-orange-500/50 transition-all"
             title="投影查看器"
           >
             <Ruler size={14} />
-            <span>📐 投影</span>
+            <span className="hidden sm:inline">📐 投影</span>
           </button>
         </div >
 
         {/* Control Mode Toggles */}
-        <div className="absolute top-6 right-6 z-10 flex gap-2">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex flex-col sm:flex-row gap-2">
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               setControlMode('orbit');
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all shadow-lg ${controlMode === 'orbit'
+            className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border text-xs font-bold transition-all shadow-lg ${controlMode === 'orbit'
               ? 'bg-orange-600 border-orange-400 text-white scale-105'
               : 'bg-neutral-900/80 border-white/10 text-neutral-400 hover:bg-neutral-800'
               }`}
             title={t('orbitDesc')}
           >
             <MousePointer2 size={14} />
-            {t('orbit')}
+            <span className="hidden sm:inline">{t('orbit')}</span>
           </button>
           <button
             onPointerDown={(e) => e.stopPropagation()}
@@ -3447,14 +3448,14 @@ ${finalCode}
               clearSelection(); // Clear any selection before entering GAME mode
               setControlMode('minecraft');
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition-all shadow-lg ${controlMode === 'minecraft'
+            className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border text-xs font-bold transition-all shadow-lg ${controlMode === 'minecraft'
               ? 'bg-green-600 border-green-400 text-white scale-105'
               : 'bg-neutral-900/80 border-white/10 text-neutral-400 hover:bg-neutral-800'
               }`}
             title={t('gameDesc')}
           >
             <Plane size={14} />
-            {t('game')}
+            <span className="hidden sm:inline">{t('game')}</span>
           </button>
         </div >
 
@@ -3468,6 +3469,7 @@ ${finalCode}
           frameloop="always"
           gl={{ preserveDrawingBuffer: false }}
           className="cursor-grab active:cursor-grabbing"
+          style={{ width: '100%', height: '100%' }}
           onCreated={(state) => {
             console.log('[Canvas] R3F Created!', {
               scene: state.scene.children.length,
