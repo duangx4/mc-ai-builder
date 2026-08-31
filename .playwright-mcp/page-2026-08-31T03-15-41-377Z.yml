@@ -1,0 +1,83 @@
+- generic [ref=f5e3]:
+  - generic [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - generic [ref=f5e6]:
+        - heading "AI 建筑师" [level=1] [ref=f5e11]
+        - button "新对话" [ref=f5e12]
+      - generic [ref=f5e15]:
+        - button "直接导入" [ref=f5e16]
+        - button "设置" [ref=f5e21]
+        - button "导出" [ref=f5e26]
+    - generic [ref=f5e32]:
+      - button "对话" [ref=f5e33]
+      - button "历史会话" [ref=f5e34]
+    - generic [ref=f5e36]:
+      - generic [ref=f5e37]:
+        - generic [ref=f5e38]:
+          - button "建造模式" [ref=f5e39]
+          - button "视觉模式" [ref=f5e42]
+        - generic [ref=f5e51]:
+          - button "快速" [ref=f5e52]
+          - button "自定义" [ref=f5e55]
+          - button "🤖 自主" [ref=f5e58]
+          - button "智能构建" [ref=f5e59]
+      - generic [ref=f5e115]:
+        - button "Undo (or click ↩ on any message above)" [ref=f5e116]
+        - generic [ref=f5e120]: 1/1
+        - button "Redo" [disabled] [ref=f5e121]
+      - generic [ref=f5e63]:
+        - button "✨ 优化提示词" [disabled] [ref=f5e65]
+        - generic [ref=f5e70]:
+          - button "上传图片" [ref=f5e71]
+          - textbox "描述你的构想..." [ref=f5e76]
+          - button [ref=f5e77]
+  - generic [ref=f5e81]:
+    - generic [ref=f5e82]:
+      - generic: "方块数: 3"
+      - button "白昼" [ref=f5e83]
+      - button "实景视图" [ref=f5e91]
+      - button "📐 投影" [ref=f5e97]
+    - generic [ref=f5e105]:
+      - button "编辑视角" [ref=f5e106]
+      - button "游戏视角" [ref=f5e109]
+    - generic:
+      - generic: L-CLICK ROTATE
+      - generic: M-CLICK PAN
+      - generic: SCROLL ZOOM
+  - generic [ref=f5e125]:
+    - generic [ref=f5e126]:
+      - heading "🔧 Block Tools" [level=3] [ref=f5e127]
+      - generic [ref=f5e128]: 1 selected
+    - generic [ref=f5e129]:
+      - generic [ref=f5e130]: Selection
+      - generic [ref=f5e131]: dirt
+    - generic [ref=f5e133]:
+      - generic [ref=f5e134]: 🛠️ Actions
+      - button "🗑️ Delete (1)" [ref=f5e135] [cursor=pointer]
+      - button "✕ Clear Selection" [ref=f5e136] [cursor=pointer]
+    - generic [ref=f5e137]:
+      - generic [ref=f5e138]: ↩️ History
+      - generic [ref=f5e139]:
+        - button "↩️ Undo" [disabled] [ref=f5e140]
+        - button "↪️ Redo" [disabled] [ref=f5e141]
+      - generic [ref=f5e142]: 1 / 1 steps
+    - generic [ref=f5e143]:
+      - generic [ref=f5e144]:
+        - text: "Delete:"
+        - generic [ref=f5e145]: Del
+      - generic [ref=f5e146]:
+        - text: "Undo:"
+        - generic [ref=f5e147]: Ctrl
+        - text: +
+        - generic [ref=f5e148]: Z
+      - generic [ref=f5e149]:
+        - text: "Redo:"
+        - generic [ref=f5e150]: Ctrl
+        - text: +
+        - generic [ref=f5e151]: "Y"
+      - generic [ref=f5e152]:
+        - text: "Deselect:"
+        - generic [ref=f5e153]: Esc
+      - generic [ref=f5e154]:
+        - text: "Move:"
+        - generic [ref=f5e155]: Gizmo Axis

@@ -258,6 +258,38 @@ function CameraUpdater({ fov }) {
   return null;
 }
 
+// 调试助手：强制相机看向场景中心
+function CameraDebugHelper() {
+  const { camera, scene, gl } = useThree();
+
+  useEffect(() => {
+    console.log('[CameraDebugHelper] Camera setup:', {
+      position: camera.position.toArray(),
+      rotation: camera.rotation.toArray(),
+      fov: camera.fov,
+      near: camera.near,
+      far: camera.far
+    });
+
+    console.log('[CameraDebugHelper] Scene children:', scene.children.length);
+    console.log('[CameraDebugHelper] Scene children types:',
+      scene.children.map(c => c.type).join(', ')
+    );
+
+    // 强制相机看向原点
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+
+    console.log('[CameraDebugHelper] Camera forced to lookAt(0,0,0)');
+
+    // 强制渲染一帧
+    gl.render(scene, camera);
+    console.log('[CameraDebugHelper] Forced render');
+  }, [camera, scene, gl]);
+
+  return null;
+}
+
 function App() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -3521,6 +3553,9 @@ ${finalCode}
           )}
 
           <CameraUpdater fov={apiSettings.fov || 75} />
+
+          {/* 调试相机助手 */}
+          <CameraDebugHelper />
 
           {/* 测试立方体 - 验证 R3F 渲染是否工作 */}
           <mesh position={[0, 5, 0]}>
