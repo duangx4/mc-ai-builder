@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Deepslate 最小测试</title>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <pre id="log"></pre>
+
+  <script type="module">
+    import { Structure, StructureRenderer, BlockState, TextureAtlas, BlockDefinition, BlockModel } from 'deepslate';
+
+    const log = document.getElementById('log');
+    function logger(msg) {
+      console.log(msg);
+      log.textContent += msg + '\n';
+    }
+
+    async function test() {
+      try {
+        logger('1. 创建空的 TextureAtlas');
+        const atlas = TextureAtlas.empty();
+        logger(`   - atlas 类型: ${atlas.constructor.name}`);
+        logger(`   - atlas.getTextureUV 存在: ${typeof atlas.getTextureUV === 'function'}`);
+
+        logger('\n2. 创建简单的 Structure');
+        const structure = new Structure([2, 2, 2]);
+        const stoneState = BlockState.fromString('minecraft:stone');
+        structure.addBlock([0, 0, 0], stoneState);
+        structure.addBlock([1, 0, 0], stoneState);
+        logger(`   - structure.blocks.length: ${structure.blocks.length}`);
+        logger(`   - structure.palette.length: ${structure.palette.length}`);
+
+        logger('\n3. 创建 Resources 对象');
+        const resources = {
+          getTextureAtlas: () => atlas,
+          getBlockFlags: () => 0,
+          getDefaultBlockProperties: () => ({}),
+          getBlockDefinition: (id) => {
+            logger(`   - getBlockDefinition 被调用: ${id}`);
+            return BlockDefinition.fromJson({
+              variants: {
+                "": { model: "minecraft:block/stone" }
+              }
+            });
+          },
+          getBlockModel: (id) => {
+            logger(`   - getBlockModel 被调用: ${id}`);
+            return BlockModel.fromJson({
+              textures: { all: "minecraft:block/stone" },
+              elements: [{
+                from: [0, 0, 0],
+                to: [16, 16, 16],
+                faces: {
+                  north: { texture: "#all", uv: [0, 0, 16, 16] },
+                  south: { texture: "#all", uv: [0, 0, 16, 16] },
+                  east: { texture: "#all", uv: [0, 0, 16, 16] },
+                  west: { texture: "#all", uv: [0, 0, 16, 16] },
+                  up: { texture: "#all", uv: [0, 0, 16, 16] },
+                  down: { texture: "#all", uv: [0, 0, 16, 16] }
+                }
+              }]
+            });
+          }
+        };
+
+        logger('\n4. 创建 StructureRenderer');
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl2');
+        const renderer = new StructureRenderer(gl, structure, resources);
+        logger('   ✓ StructureRenderer 创建成功！');
+
+      } catch (e) {
+        logger(`\n❌ 错误: ${e.message}`);
+        logger(`堆栈: ${e.stack}`);
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>
