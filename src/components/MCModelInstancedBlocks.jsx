@@ -43,6 +43,9 @@ function MCModelInstancedBlocks({ blocks, blockType, positionMap, material, onBl
             const connections = inferBlockConnections(block, positionMap);
             const properties = { ...connections, ...block.properties };
 
+            // 调试日志
+            console.log('[MCModelInstancedBlocks] Block:', block.type, 'Properties:', properties);
+
             // 解析 blockstate 获取适用的模型
             const models = parseBlockstate(blockstateJson, properties);
 

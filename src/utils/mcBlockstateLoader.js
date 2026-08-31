@@ -119,16 +119,44 @@ export function inferBlockConnections(block, positionMap) {
         { key: 'down', offset: [0, -1, 0] }
     ];
 
+    // 特殊处理：墙体需要 "low"/"tall"/"none" 而不是 "true"/"false"
+    const isWall = blockType.includes('_wall') && !blockType.startsWith('wall_');
+
     directions.forEach(({ key, offset }) => {
         const neighborKey = `${x + offset[0]},${y + offset[1]},${z + offset[2]}`;
         const neighbor = positionMap.get(neighborKey);
 
         if (neighbor && canConnect(blockType, (neighbor.type || '').toLowerCase().replace(/\[.*\]/, ''), key)) {
-            connections[key] = 'true';
+            if (isWall) {
+                // 墙体使用 "low" 或 "tall"（简化：都用 "low"）
+                connections[key] = 'low';
+            } else {
+                connections[key] = 'true';
+            }
         } else {
-            connections[key] = 'false';
+            if (isWall) {
+                connections[key] = 'none';
+            } else {
+                connections[key] = 'false';
+            }
         }
     });
+
+    // 墙体的 up 属性：有任何连接时为 true，否则 false
+    if (isWall) {
+        const hasConnection = ['north', 'south', 'east', 'west'].some(dir => connections[dir] !== 'none');
+        connections.up = hasConnection ? 'true' : 'false';
+    }
+
+    // 灯笼和火把的特殊属性
+    if (blockType === 'lantern' || blockType === 'soul_lantern') {
+        connections.hanging = 'false'; // 默认放在地面
+    }
+
+    if (blockType.includes('torch') && !blockType.includes('torchflower')) {
+        // 火把默认直立
+        // wall_torch 会有不同的 blockstate
+    }
 
     return connections;
 }
