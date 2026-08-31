@@ -1,0 +1,24 @@
+{
+  "name": "cdp-debug-skill",
+  "version": "1.0.0",
+  "description": "Chrome DevTools Protocol 自动化调试技能",
+  "author": "MC AI Builder Team",
+  "category": "debugging",
+  "tags": ["cdp", "chrome", "automation", "testing", "debugging"],
+  "capabilities": [
+    "browser-automation",
+    "page-inspection",
+    "console-monitoring",
+    "screenshot-capture",
+    "voxelworld-testing"
+  ],
+  "requirements": {
+    "chrome": "带 --remote-debugging-port=9222 启动",
+    "dependencies": ["chrome-remote-interface"]
+  },
+  "examples": [
+    "test-voxelworld-final.js",
+    "debug-add-block.js",
+    "check-current-page.js"
+  ]
+}

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Debug Dashboard - MC AI Builder</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Consolas', 'Monaco', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .header {
+      border: 2px solid #00ff00;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #001a00;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .header .status {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-item .label {
+      color: #888;
+    }
+
+    .status-item .value {
+      font-weight: bold;
+    }
+
+    .status-item.ok .value { color: #00ff00; }
+    .status-item.error .value { color: #ff0000; }
+    .status-item.warn .value { color: #ffaa00; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      border: 1px solid #00ff00;
+      background: #001a00;
+      padding: 15px;
+    }
+
+    .panel.full {
+      grid-column: 1 / -1;
+    }
+
+    .panel h2 {
+      font-size: 16px;
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #00ff00;
+      color: #00ffff;
+    }
+
+    .panel pre {
+      background: #000;
+      border: 1px solid #333;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      padding: 4px 8px;
+      margin: 2px 0;
+      border-left: 3px solid #00ff00;
+      background: #001100;
+    }
+
+    .log-entry.error {
+      border-left-color: #ff0000;
+      background: #1a0000;
+      color: #ff6666;
+    }
+
+    .log-entry.warn {
+      border-left-color: #ffaa00;
+      background: #1a1400;
+      color: #ffcc66;
+    }
+
+    .log-entry.info {
+      border-left-color: #0088ff;
+      background: #001a1a;
+      color: #66ccff;
+    }
+
+    .canvas-container {
+      border: 2px solid #00ff00;
+      background: #000;
+      padding: 10px;
+      text-align: center;
+    }
+
+    canvas {
+      border: 1px solid #333;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .data-table th {
+      background: #002200;
+      padding: 8px;
+      text-align: left;
+      border: 1px solid #00ff00;
+      color: #00ffff;
+    }
+
+    .data-table td {
+      padding: 6px 8px;
+      border: 1px solid #003300;
+    }
+
+    .data-table tr:nth-child(even) {
+      background: #001100;
+    }
+
+    .data-table tr:hover {
+      background: #002200;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #002200;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: #00ff00;
+      color: #000;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .json-viewer {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .json-key {
+      color: #00ffff;
+    }
+
+    .json-string {
+      color: #ffaa00;
+    }
+
+    .json-number {
+      color: #00ff00;
+    }
+
+    .json-boolean {
+      color: #ff00ff;
+    }
+
+    #autoRefresh {
+      margin-left: auto;
+    }
+
+    .timestamp {
+      color: #666;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🤖 AI Debug Dashboard</h1>
+    <div class="status" id="mainStatus">
+      <div class="status-item">
+        <span class="label">React:</span>
+        <span class="value" id="reactStatus">检查中...</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Store:</span>
+        <span class="value" id="storeStatus">检查中...</span>
+      </div>
+      <div class="status-item">
+        <span class="label">Canvas:</span>
+        <span class="value" id="canvasStatus">检查中...</span>
+      </div>
+      <div class="status-item">
+        <span class="label">WebGL:</span>
+        <span class="value" id="webglStatus">检查中...</span>
+      </div>
+      <div class="status-item">
+        <span class="label">方块数:</span>
+        <span class="value" id="blockCount">0</span>
+      </div>
+      <div class="status-item">
+        <span class="label">最后更新:</span>
+        <span class="value timestamp" id="lastUpdate">--:--:--</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <button onclick="refreshAll()">🔄 刷新状态</button>
+    <button onclick="testBasicBlocks()">🧱 测试基础方块</button>
+    <button onclick="testStairs()">🪜 测试楼梯</button>
+    <button onclick="testSpecialBlocks()">✨ 测试特殊方块</button>
+    <button onclick="clearBlocks()">🗑️ 清空方块</button>
+    <button onclick="exportLogs()">💾 导出日志</button>
+    <button id="autoRefresh" onclick="toggleAutoRefresh()">⏸️ 停止自动刷新</button>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>📊 Store 状态</h2>
+      <pre id="storeState" class="json-viewer">加载中...</pre>
+    </div>
+
+    <div class="panel">
+      <h2>🖼️ Canvas 信息</h2>
+      <pre id="canvasInfo">加载中...</pre>
+    </div>
+
+    <div class="panel">
+      <h2>🧊 方块列表 (前 10 个)</h2>
+      <div style="max-height: 300px; overflow-y: auto;">
+        <table class="data-table" id="blockTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>类型</th>
+              <th>位置</th>
+              <th>属性</th>
+            </tr>
+          </thead>
+          <tbody id="blockTableBody">
+            <tr><td colspan="4" style="text-align: center; color: #666;">暂无方块</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📝 控制台日志</h2>
+      <div id="consoleLogs" style="max-height: 300px; overflow-y: auto;">
+        <div class="log-entry info">等待日志...</div>
+      </div>
+    </div>
+
+    <div class="panel full">
+      <h2>🎨 Canvas 预览</h2>
+      <div class="canvas-container">
+        <div id="canvasPreview">Canvas 未找到或未加载</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>📡 AI 可访问的全局对象</h2>
+    <pre id="globalObjects">加载中...</pre>
+  </div>
+
+  <script>
+    // 全局状态
+    let autoRefreshEnabled = true;
+    let autoRefreshInterval = null;
+    let consoleLogsBuffer = [];
+
+    // 拦截控制台日志
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+
+    function addConsoleLog(level, args) {
+      const timestamp = new Date().toLocaleTimeString();
+      const message = Array.from(args).map(arg =>
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+
+      consoleLogsBuffer.push({ level, message, timestamp });
+      if (consoleLogsBuffer.length > 100) consoleLogsBuffer.shift();
+
+      updateConsoleDisplay();
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addConsoleLog('log', args);
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addConsoleLog('warn', args);
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addConsoleLog('error', args);
+    };
+
+    function updateConsoleDisplay() {
+      const container = document.getElementById('consoleLogs');
+      if (consoleLogsBuffer.length === 0) {
+        container.innerHTML = '<div class="log-entry info">暂无日志</div>';
+        return;
+      }
+
+      container.innerHTML = consoleLogsBuffer.slice(-50).reverse().map(log =>
+        `<div class="log-entry ${log.level}">
+          <span class="timestamp">[${log.timestamp}]</span> ${escapeHtml(log.message)}
+        </div>`
+      ).join('');
+
+      container.scrollTop = 0;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 刷新所有状态
+    async function refreshAll() {
+      updateTimestamp();
+      await Promise.all([
+        updateStatus(),
+        updateStoreState(),
+        updateCanvasInfo(),
+        updateBlockTable(),
+        updateGlobalObjects(),
+        updateCanvasPreview()
+      ]);
+    }
+
+    function updateTimestamp() {
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    }
+
+    async function updateStatus() {
+      // 检查 React
+      const hasReact = !!document.querySelector('#root')?.children.length;
+      setStatus('reactStatus', hasReact ? 'OK' : 'NO', hasReact ? 'ok' : 'error');
+
+      // 检查 Store
+      const hasStore = typeof window.__voxel_store !== 'undefined';
+      setStatus('storeStatus', hasStore ? 'OK' : 'NO', hasStore ? 'ok' : 'error');
+
+      // 检查 Canvas
+      const canvas = document.querySelector('canvas');
+      setStatus('canvasStatus', canvas ? 'OK' : 'NO', canvas ? 'ok' : 'error');
+
+      // 检查 WebGL
+      const hasWebGL = canvas && !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+      setStatus('webglStatus', hasWebGL ? 'OK' : 'NO', hasWebGL ? 'ok' : 'error');
+
+      // 方块数
+      if (hasStore) {
+        const blockCount = window.__voxel_store.getState().blocks?.length || 0;
+        document.getElementById('blockCount').textContent = blockCount;
+      }
+    }
+
+    function setStatus(id, text, className) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.parentElement.className = 'status-item ' + className;
+    }
+
+    function updateStoreState() {
+      if (typeof window.__voxel_store === 'undefined') {
+        document.getElementById('storeState').textContent = 'Store 未找到';
+        return;
+      }
+
+      const state = window.__voxel_store.getState();
+      const filtered = {
+        language: state.language,
+        viewMode: state.viewMode,
+        controlMode: state.controlMode,
+        blocksCount: state.blocks?.length || 0,
+        semanticVoxelsCount: state.semanticVoxels?.length || 0,
+        messagesCount: state.currentMessages?.length || 0,
+        snapshotIndex: state.snapshotIndex,
+        maxSnapshots: state.maxSnapshots
+      };
+
+      document.getElementById('storeState').textContent = JSON.stringify(filtered, null, 2);
+    }
+
+    function updateCanvasInfo() {
+      const canvas = document.querySelector('canvas');
+      if (!canvas) {
+        document.getElementById('canvasInfo').textContent = 'Canvas 未找到';
+        return;
+      }
+
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      const info = {
+        尺寸: `${canvas.width} x ${canvas.height}`,
+        客户端尺寸: `${canvas.clientWidth} x ${canvas.clientHeight}`,
+        WebGL版本: gl ? gl.constructor.name : '未初始化',
+        最大纹理尺寸: gl ? gl.getParameter(gl.MAX_TEXTURE_SIZE) : 'N/A',
+        视口: gl ? gl.getParameter(gl.VIEWPORT) : 'N/A'
+      };
+
+      document.getElementById('canvasInfo').textContent = JSON.stringify(info, null, 2);
+    }
+
+    function updateBlockTable() {
+      if (typeof window.__voxel_store === 'undefined') return;
+
+      const blocks = window.__voxel_store.getState().blocks || [];
+      const tbody = document.getElementById('blockTableBody');
+
+      if (blocks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #666;">暂无方块</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = blocks.slice(0, 10).map(block => `
+        <tr>
+          <td>${block.id || 'N/A'}</td>
+          <td>${block.type || 'unknown'}</td>
+          <td>[${block.position ? block.position.join(', ') : 'N/A'}]</td>
+          <td>${JSON.stringify(block.properties || {})}</td>
+        </tr>
+      `).join('');
+    }
+
+    function updateGlobalObjects() {
+      const globals = {
+        '__voxel_store': typeof window.__voxel_store,
+        'React': typeof window.React,
+        'ReactDOM': typeof window.ReactDOM,
+        'THREE': typeof window.THREE,
+        'useStore函数': typeof window.__voxel_store,
+        'store.getState': typeof window.__voxel_store?.getState,
+        'store.setBlocks': typeof window.__voxel_store?.getState().setBlocks,
+        'store.clearBlocks': typeof window.__voxel_store?.getState().clearBlocks
+      };
+
+      document.getElementById('globalObjects').textContent = JSON.stringify(globals, null, 2);
+    }
+
+    function updateCanvasPreview() {
+      const canvas = document.querySelector('canvas');
+      const container = document.getElementById('canvasPreview');
+
+      if (!canvas) {
+        container.innerHTML = 'Canvas 未找到';
+        return;
+      }
+
+      // 克隆 canvas 用于预览
+      try {
+        const clone = canvas.cloneNode(true);
+        clone.style.maxWidth = '100%';
+        clone.style.height = 'auto';
+        container.innerHTML = '';
+        container.appendChild(clone);
+      } catch (e) {
+        container.innerHTML = `Canvas 预览失败: ${e.message}`;
+      }
+    }
+
+    // 测试函数
+    function testBasicBlocks() {
+      if (typeof window.__voxel_store === 'undefined') {
+        alert('Store 未找到');
+        return;
+      }
+
+      const blocks = [
+        { id: 'test-1', type: 'stone', position: [0, 0, 0], properties: {} },
+        { id: 'test-2', type: 'dirt', position: [1, 0, 0], properties: {} },
+        { id: 'test-3', type: 'grass_block', position: [2, 0, 0], properties: {} }
+      ];
+
+      window.__voxel_store.getState().setBlocks(blocks);
+      console.log('✅ 已添加 3 个基础方块');
+      setTimeout(refreshAll, 500);
+    }
+
+    function testStairs() {
+      if (typeof window.__voxel_store === 'undefined') {
+        alert('Store 未找到');
+        return;
+      }
+
+      const blocks = [
+        { id: 'stairs-1', type: 'oak_stairs', position: [0, 0, 0], properties: { facing: 'north' } },
+        { id: 'stairs-2', type: 'stone_stairs', position: [1, 0, 0], properties: { facing: 'south' } },
+        { id: 'stairs-3', type: 'polished_deepslate_stairs', position: [2, 0, 0], properties: { facing: 'east' } }
+      ];
+
+      window.__voxel_store.getState().setBlocks(blocks);
+      console.log('✅ 已添加 3 个楼梯方块');
+      setTimeout(refreshAll, 500);
+    }
+
+    function testSpecialBlocks() {
+      if (typeof window.__voxel_store === 'undefined') {
+        alert('Store 未找到');
+        return;
+      }
+
+      const blocks = [
+        { id: 'special-1', type: 'crying_obsidian', position: [0, 0, 0], properties: {} },
+        { id: 'special-2', type: 'dragon_egg', position: [1, 0, 0], properties: {} },
+        { id: 'special-3', type: 'torch', position: [2, 0, 0], properties: {} }
+      ];
+
+      window.__voxel_store.getState().setBlocks(blocks);
+      console.log('✅ 已添加 3 个特殊方块');
+      setTimeout(refreshAll, 500);
+    }
+
+    function clearBlocks() {
+      if (typeof window.__voxel_store === 'undefined') {
+        alert('Store 未找到');
+        return;
+      }
+
+      window.__voxel_store.getState().clearBlocks();
+      console.log('🗑️ 已清空所有方块');
+      setTimeout(refreshAll, 500);
+    }
+
+    function exportLogs() {
+      const data = {
+        timestamp: new Date().toISOString(),
+        consoleLogs: consoleLogsBuffer,
+        storeState: window.__voxel_store ? window.__voxel_store.getState() : null,
+        canvasInfo: document.getElementById('canvasInfo').textContent
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `debug-logs-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log('💾 日志已导出');
+    }
+
+    function toggleAutoRefresh() {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('autoRefresh');
+
+      if (autoRefreshEnabled) {
+        btn.textContent = '⏸️ 停止自动刷新';
+        startAutoRefresh();
+      } else {
+        btn.textContent = '▶️ 启动自动刷新';
+        stopAutoRefresh();
+      }
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshInterval) return;
+      autoRefreshInterval = setInterval(refreshAll, 2000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    }
+
+    // 暴露给 AI 的全局调试接口
+    window.__ai_debug__ = {
+      refreshAll,
+      testBasicBlocks,
+      testStairs,
+      testSpecialBlocks,
+      clearBlocks,
+      exportLogs,
+      getState: () => window.__voxel_store?.getState(),
+      setBlocks: (blocks) => window.__voxel_store?.getState().setBlocks(blocks),
+      getLogs: () => consoleLogsBuffer
+    };
+
+    // 初始化
+    console.log('🤖 AI Debug Dashboard 已加载');
+    console.log('全局调试接口: window.__ai_debug__');
+    refreshAll();
+    startAutoRefresh();
+  </script>
+</body>
+</html>
