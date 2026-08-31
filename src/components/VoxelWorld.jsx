@@ -1764,42 +1764,25 @@ export default function VoxelWorld({ version = '1.20.1' }) {
 
     // Removed Auto-center Logic (centerOffset is gone)
 
-    const isStair = (block) => block.type?.toLowerCase().includes('_stairs');
-    const isWaterBlock = (block) => block.type === 'water' || block.type === 'flowing_water';
-    const isFenceOrWall = (block) => {
-        const cleanType = cleanBlockType(block.type);
-        return (cleanType.includes('_fence') && !cleanType.includes('fence_gate')) ||
-               (cleanType.includes('_wall') && !cleanType.startsWith('wall_'));
-    };
-    const isTorchOrLantern = (block) => {
-        const cleanType = cleanBlockType(block.type);
-        return (cleanType.includes('torch') && !cleanType.includes('torchflower')) ||
-               cleanType === 'lantern' || cleanType === 'soul_lantern';
-    };
-
-    const { stairBlocks, waterBlocks, fenceWallBlocks, torchLanternBlocks, regularBlocks } = useMemo(() => {
-        const stairs = [];
-        const water = [];
-        const fenceWall = [];
-        const torchLantern = [];
-        const regular = [];
-
-        visibleBlocks.forEach(block => {
-            if (isStair(block)) stairs.push(block);
-            else if (isWaterBlock(block)) water.push(block);
-            else if (isFenceOrWall(block)) fenceWall.push(block);
-            else if (isTorchOrLantern(block)) torchLantern.push(block);
-            else regular.push(block);
-        });
-
-        return {
-            stairBlocks: stairs,
-            waterBlocks: water,
-            fenceWallBlocks: fenceWall,
-            torchLanternBlocks: torchLantern,
-            regularBlocks: regular
-        };
+    // 使用新的方块分类系统
+    const groupedBlocks = useMemo(() => {
+        return groupBlocksByRenderType(visibleBlocks);
     }, [visibleBlocks]);
+
+    // 兼容旧代码：楼梯、水、栅栏围墙等
+    const stairBlocks = groupedBlocks[BlockRenderType.STAIRS] || [];
+    const waterBlocks = groupedBlocks[BlockRenderType.NORMAL].filter(b =>
+        b.type === 'water' || b.type === 'flowing_water'
+    ) || [];
+    const fenceWallBlocks = [
+        ...(groupedBlocks[BlockRenderType.FENCE] || []),
+        ...(groupedBlocks[BlockRenderType.WALL] || [])
+    ];
+    const torchLanternBlocks = [
+        ...(groupedBlocks[BlockRenderType.TORCH] || []),
+        ...(groupedBlocks[BlockRenderType.LANTERN] || [])
+    ];
+    const regularBlocks = groupedBlocks[BlockRenderType.NORMAL] || [];
 
     // 加载方块分类数据（用于判断是否使用 vanilla 模型渲染器）
     const [vanillaBlockTypes, setVanillaBlockTypes] = useState(new Set());
