@@ -39,28 +39,32 @@ function MCModelInstancedBlocks({ blocks, blockType, positionMap, material, onBl
         const groups = new Map(); // key: 模型签名, value: { blocks: [], modelDefs: [] }
 
         blocks.forEach(block => {
-            // 推断连接状态
-            const connections = inferBlockConnections(block, positionMap);
+            let models = [];
 
-            // 临时修复：手动添加特殊属性（绕过模块缓存问题）
-            const blockType = (block.type || '').toLowerCase();
-            if (blockType === 'lantern' || blockType === 'soul_lantern') {
-                connections.hanging = 'false';
+            // 特殊处理：灯笼系列（绕过模块缓存问题）
+            const cleanType = (block.type || '').toLowerCase().replace(/\[.*\]/, '');
+            if (cleanType === 'lantern' || cleanType === 'soul_lantern') {
+                // 灯笼直接使用 variants 逻辑
+                models = [{
+                    model: `minecraft:block/${cleanType}`,
+                    x: 0,
+                    y: 0,
+                    uvlock: false
+                }];
+            } else {
+                // 其他方块：推断连接状态并解析 blockstate
+                const connections = inferBlockConnections(block, positionMap);
+                const properties = { ...connections, ...block.properties };
+
+                // 调试日志
+                console.log('[MCModelInstancedBlocks] Block:', block.type, 'Properties:', properties);
+
+                // 解析 blockstate 获取适用的模型
+                models = parseBlockstate(blockstateJson, properties);
             }
-            if (blockType === 'torch' || blockType === 'soul_torch') {
-                // 火把默认直立（非墙壁火把）
-            }
-
-            const properties = { ...connections, ...block.properties };
-
-            // 调试日志
-            console.log('[MCModelInstancedBlocks] Block:', block.type, 'Properties:', properties);
-
-            // 解析 blockstate 获取适用的模型
-            const models = parseBlockstate(blockstateJson, properties);
 
             if (models.length === 0) {
-                console.warn('[MCModelInstancedBlocks] No models for block:', block, properties);
+                console.warn('[MCModelInstancedBlocks] No models for block:', block);
                 return;
             }
 
