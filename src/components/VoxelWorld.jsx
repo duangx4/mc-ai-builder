@@ -8,6 +8,7 @@ import { TransformControls } from '@react-three/drei';
 import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, GLOW_BLOCKS, WATER_BLOCKS, CN_MATERIAL_MAP, cleanBlockType } from '../utils/textureMapping';
 import { inferConnections } from '../utils/blockConnections';
 import { loadAtlas, createAtlasMaterial, resolveTextureRef, getTextureUV, mapFaceUVToAtlas, isAtlasLoaded } from '../utils/atlasMaterial';
+import MCModelInstancedBlocks from './MCModelInstancedBlocks';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
 // 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
@@ -2014,7 +2015,7 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 />
             ))}
 
-            {/* Render Fence/Wall blocks with connection logic */}
+            {/* Render Fence/Wall blocks with MC JSON models */}
             {!useUltraPerformance && (() => {
                 // 按类型分组（oak_fence, cobblestone_wall 等）
                 const groupedFenceWall = new Map();
@@ -2026,18 +2027,23 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                     groupedFenceWall.get(cleanType).push(block);
                 });
 
-                return Array.from(groupedFenceWall.entries()).map(([blockType, blocksInGroup]) => (
-                    <FenceWallInstancedBlocks
-                        key={blockType}
-                        blocks={blocksInGroup}
-                        blockType={blockType}
-                        onBlockClick={safeSelectBlock}
-                        version={version}
-                    />
-                ));
+                return Array.from(groupedFenceWall.entries()).map(([blockType, blocksInGroup]) => {
+                    const material = getOrCreateMaterial(blockType, version);
+                    return (
+                        <MCModelInstancedBlocks
+                            key={blockType}
+                            blocks={blocksInGroup}
+                            blockType={blockType}
+                            positionMap={positionMap}
+                            material={material}
+                            onBlockClick={safeSelectBlock}
+                            version={version}
+                        />
+                    );
+                });
             })()}
 
-            {/* Render Torch/Lantern blocks with composite geometry */}
+            {/* Render Torch/Lantern blocks with MC JSON models */}
             {!useUltraPerformance && (() => {
                 // 按类型分组（torch, lantern, soul_torch 等）
                 const groupedTorchLantern = new Map();
@@ -2049,15 +2055,20 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                     groupedTorchLantern.get(cleanType).push(block);
                 });
 
-                return Array.from(groupedTorchLantern.entries()).map(([blockType, blocksInGroup]) => (
-                    <TorchLanternInstancedBlocks
-                        key={blockType}
-                        blocks={blocksInGroup}
-                        blockType={blockType}
-                        onBlockClick={safeSelectBlock}
-                        version={version}
-                    />
-                ));
+                return Array.from(groupedTorchLantern.entries()).map(([blockType, blocksInGroup]) => {
+                    const material = getOrCreateMaterial(blockType, version);
+                    return (
+                        <MCModelInstancedBlocks
+                            key={blockType}
+                            blocks={blocksInGroup}
+                            blockType={blockType}
+                            positionMap={positionMap}
+                            material={material}
+                            onBlockClick={safeSelectBlock}
+                            version={version}
+                        />
+                    );
+                });
             })()}
 
             {/* Render water blocks with animation */}

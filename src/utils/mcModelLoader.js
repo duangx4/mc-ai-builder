@@ -15,9 +15,10 @@ import * as THREE from 'three';
  * @param {Array} element.to - [x2, y2, z2] (0-16 像素坐标)
  * @param {Object} element.faces - 面定义 {north, south, east, west, up, down}
  * @param {Object} element.rotation - 可选旋转 {origin, axis, angle}
+ * @param {Object} textures - 纹理映射表
  * @returns {THREE.BufferGeometry}
  */
-function createElementGeometry(element, textureResolver) {
+function createElementGeometry(element, textures = {}) {
     const { from, to, faces = {}, rotation, shade = true } = element;
 
     // MC 坐标系 (0-16) → Three.js 坐标系 (-0.5 到 0.5)
@@ -63,10 +64,80 @@ function createElementGeometry(element, textureResolver) {
         geometry.translate(pivotX, pivotY, pivotZ);
     }
 
-    // TODO: 应用 UV 坐标（下一步实现）
-    // applyUVMapping(geometry, faces, textureResolver);
+    // 应用 UV 映射
+    applyUVMapping(geometry, element, textures);
 
     return geometry;
+}
+
+/**
+ * 应用 UV 坐标映射到几何体
+ *
+ * BoxGeometry 的面顺序：右(+X)、左(-X)、上(+Y)、下(-Y)、前(+Z)、后(-Z)
+ * MC 的面定义：north(-Z)、south(+Z)、east(+X)、west(-X)、up(+Y)、down(-Y)
+ */
+function applyUVMapping(geometry, element, textures) {
+    const { faces = {}, from = [0, 0, 0], to = [16, 16, 16] } = element;
+
+    // BoxGeometry 默认 UV 是 0-1，我们需要根据 MC 的 UV 坐标调整
+    const uvAttribute = geometry.attributes.uv;
+    if (!uvAttribute) return;
+
+    // MC 面到 BoxGeometry 面的映射
+    // BoxGeometry 每个面占 4 个 UV 坐标（2 个三角形）
+    const faceMapping = {
+        'east': 0,   // +X (右)
+        'west': 1,   // -X (左)
+        'up': 2,     // +Y (上)
+        'down': 3,   // -Y (下)
+        'south': 4,  // +Z (前)
+        'north': 5   // -Z (后)
+    };
+
+    Object.entries(faces).forEach(([faceName, faceData]) => {
+        const faceIndex = faceMapping[faceName];
+        if (faceIndex === undefined) return;
+
+        // 每个面有 4 个 UV 坐标（2 个三角形共享顶点）
+        const uvOffset = faceIndex * 4;
+
+        // MC UV 坐标 (0-16像素) → 标准化 UV (0-1)
+        let uv = faceData.uv || getDefaultUV(faceName, from, to);
+
+        // 标准化 UV 坐标（MC 使用 0-16 像素坐标）
+        const u1 = uv[0] / 16;
+        const v1 = uv[1] / 16;
+        const u2 = uv[2] / 16;
+        const v2 = uv[3] / 16;
+
+        // 设置 4 个角的 UV（逆时针，从左下开始）
+        uvAttribute.setXY(uvOffset + 0, u1, v2); // 左下
+        uvAttribute.setXY(uvOffset + 1, u2, v2); // 右下
+        uvAttribute.setXY(uvOffset + 2, u1, v1); // 左上
+        uvAttribute.setXY(uvOffset + 3, u2, v1); // 右上
+    });
+
+    uvAttribute.needsUpdate = true;
+}
+
+/**
+ * 获取默认 UV 坐标（如果 MC 模型没有指定）
+ */
+function getDefaultUV(faceName, from, to) {
+    // 根据面的方向，使用 from/to 坐标作为默认 UV
+    switch (faceName) {
+        case 'north':
+        case 'south':
+            return [from[0], from[1], to[0], to[1]]; // X, Y
+        case 'east':
+        case 'west':
+            return [from[2], from[1], to[2], to[1]]; // Z, Y
+        case 'up':
+        case 'down':
+            return [from[0], from[2], to[0], to[2]]; // X, Z
+        default:
+            return [0, 0, 16, 16];
+    }
 }
 
 /**
