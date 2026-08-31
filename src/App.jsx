@@ -4,8 +4,6 @@ import { OrbitControls, Stars, Grid, Environment } from '@react-three/drei';
 import { Settings, Send, Box, Download, Layers, Sparkles, Sun, Moon, FileInput, Trash2, Copy, History, Clock, FileCode, Terminal, ChevronDown, ChevronUp, MessageSquarePlus, Image as ImageIcon, Palette, Undo2, Redo2, Package, Square, Rocket, Zap, Ruler, X, Wrench } from 'lucide-react';
 import useStore from './store/useStore';
 import VoxelWorld from './components/VoxelWorld';
-import PrismarineWorld from './components/PrismarineWorld';
-import PrismarineTestPage from './pages/PrismarineTestPage';
 import PropertiesPanel from './components/PropertiesPanel';
 import SettingsModal from './components/SettingsModal';
 import CodeViewerModal from './components/CodeViewerModal';
