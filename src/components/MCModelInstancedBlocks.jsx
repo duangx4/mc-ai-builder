@@ -41,6 +41,16 @@ function MCModelInstancedBlocks({ blocks, blockType, positionMap, material, onBl
         blocks.forEach(block => {
             // 推断连接状态
             const connections = inferBlockConnections(block, positionMap);
+
+            // 临时修复：手动添加特殊属性（绕过模块缓存问题）
+            const blockType = (block.type || '').toLowerCase();
+            if (blockType === 'lantern' || blockType === 'soul_lantern') {
+                connections.hanging = 'false';
+            }
+            if (blockType === 'torch' || blockType === 'soul_torch') {
+                // 火把默认直立（非墙壁火把）
+            }
+
             const properties = { ...connections, ...block.properties };
 
             // 调试日志
