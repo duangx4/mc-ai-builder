@@ -9,6 +9,11 @@ import { getTextureBasePath, BLOCK_TEXTURE_ALIASES as ALIASES, FALLBACK_COLORS, 
 import { inferConnections } from '../utils/blockConnections';
 import { loadAtlas, createAtlasMaterial, resolveTextureRef, getTextureUV, mapFaceUVToAtlas, isAtlasLoaded } from '../utils/atlasMaterial';
 import MCModelInstancedBlocks from './MCModelInstancedBlocks';
+import { StairsBlock, InstancedStairsBlocks } from './StairsBlock';
+import { SlabBlock, InstancedSlabBlocks } from './SlabBlock';
+import { isGlassBlock, isGlassPaneBlock, getGlassMaterialProps, GLASS_BLOCKS, GLASS_PANE_BLOCKS } from '../utils/glassBlocks';
+import { createFenceGeometry, createWallGeometry, calculateConnections, parseFenceWallProperties } from '../utils/fenceWallGeometry';
+import { createDoorGeometry, createTrapdoorGeometry, parseDoorProperties, parseTrapdoorProperties } from '../utils/doorGeometry';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
 // 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
@@ -41,26 +46,14 @@ const USE_FALLBACK_ONLY = [
 
 // Transparent blocks that should render with alpha
 const TRANSPARENT_BLOCKS = [
-    'glass', 'glass_pane',
-    'tinted_glass',
-    'white_stained_glass', 'white_stained_glass_pane',
-    'orange_stained_glass', 'orange_stained_glass_pane',
-    'magenta_stained_glass', 'magenta_stained_glass_pane',
-    'light_blue_stained_glass', 'light_blue_stained_glass_pane',
-    'yellow_stained_glass', 'yellow_stained_glass_pane',
-    'lime_stained_glass', 'lime_stained_glass_pane',
-    'pink_stained_glass', 'pink_stained_glass_pane',
-    'gray_stained_glass', 'gray_stained_glass_pane',
-    'light_gray_stained_glass', 'light_gray_stained_glass_pane',
-    'cyan_stained_glass', 'cyan_stained_glass_pane',
-    'purple_stained_glass', 'purple_stained_glass_pane',
-    'blue_stained_glass', 'blue_stained_glass_pane',
-    'brown_stained_glass', 'brown_stained_glass_pane',
-    'green_stained_glass', 'green_stained_glass_pane',
-    'red_stained_glass', 'red_stained_glass_pane',
-    'black_stained_glass', 'black_stained_glass_pane',
+    ...GLASS_BLOCKS,
+    ...GLASS_PANE_BLOCKS,
     'ice', 'packed_ice', 'blue_ice',
+    'slime_block', 'honey_block',
+    'water', 'flowing_water',
+    'lava', 'flowing_lava'
 ];
+
 
 // Global texture loader
 const loader = new TextureLoader();
