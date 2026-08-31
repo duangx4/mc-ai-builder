@@ -1469,6 +1469,9 @@ const SemanticInstancedGroup = ({ color, blocks }) => {
 };
 
 export default function VoxelWorld({ version = '1.20.1' }) {
+    // 🔍 CRITICAL: 最顶层日志 - 验证组件是否被 React 调用
+    console.log('[VoxelWorld] ✅ COMPONENT CALLED! Version:', version);
+
     // Get store values
     const blocks = useStore((state) => state.blocks);
     const semanticVoxels = useStore((state) => state.semanticVoxels);
@@ -1797,13 +1800,45 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         const vanilla = new Map();
         const textured = new Map();
 
+        // 简单立方体方块白名单（强制使用 textured 渲染器，即使在 vanillaBlockTypes 中）
+        const SIMPLE_CUBE_BLOCKS = new Set([
+            'stone', 'granite', 'polished_granite', 'diorite', 'polished_diorite', 'andesite', 'polished_andesite',
+            'grass_block', 'dirt', 'coarse_dirt', 'podzol', 'cobblestone', 'oak_planks', 'spruce_planks',
+            'birch_planks', 'jungle_planks', 'acacia_planks', 'dark_oak_planks', 'crimson_planks', 'warped_planks',
+            'sand', 'red_sand', 'gravel', 'gold_ore', 'iron_ore', 'coal_ore', 'nether_gold_ore', 'oak_log',
+            'spruce_log', 'birch_log', 'jungle_log', 'acacia_log', 'dark_oak_log', 'oak_wood', 'spruce_wood',
+            'birch_wood', 'jungle_wood', 'acacia_wood', 'dark_oak_wood', 'glass', 'lapis_ore', 'lapis_block',
+            'sandstone', 'chiseled_sandstone', 'cut_sandstone', 'white_wool', 'orange_wool', 'magenta_wool',
+            'light_blue_wool', 'yellow_wool', 'lime_wool', 'pink_wool', 'gray_wool', 'light_gray_wool',
+            'cyan_wool', 'purple_wool', 'blue_wool', 'brown_wool', 'green_wool', 'red_wool', 'black_wool',
+            'gold_block', 'iron_block', 'bricks', 'tnt', 'bookshelf', 'mossy_cobblestone', 'obsidian',
+            'diamond_ore', 'diamond_block', 'crafting_table', 'redstone_ore', 'ice', 'snow_block', 'clay',
+            'netherrack', 'soul_sand', 'glowstone', 'stone_bricks', 'mossy_stone_bricks', 'cracked_stone_bricks',
+            'chiseled_stone_bricks', 'mycelium', 'nether_bricks', 'end_stone', 'emerald_ore', 'emerald_block',
+            'redstone_block', 'quartz_block', 'chiseled_quartz_block', 'quartz_pillar', 'terracotta',
+            'coal_block', 'packed_ice', 'red_sandstone', 'chiseled_red_sandstone', 'cut_red_sandstone',
+            'purpur_block', 'purpur_pillar', 'end_stone_bricks', 'magma_block', 'nether_wart_block',
+            'red_nether_bricks', 'bone_block', 'concrete', 'white_concrete', 'orange_concrete', 'magenta_concrete',
+            'light_blue_concrete', 'yellow_concrete', 'lime_concrete', 'pink_concrete', 'gray_concrete',
+            'light_gray_concrete', 'cyan_concrete', 'purple_concrete', 'blue_concrete', 'brown_concrete',
+            'green_concrete', 'red_concrete', 'black_concrete', 'white_terracotta', 'orange_terracotta',
+            'magenta_terracotta', 'light_blue_terracotta', 'yellow_terracotta', 'lime_terracotta', 'pink_terracotta',
+            'gray_terracotta', 'light_gray_terracotta', 'cyan_terracotta', 'purple_terracotta', 'blue_terracotta',
+            'brown_terracotta', 'green_terracotta', 'red_terracotta', 'black_terracotta'
+        ]);
+
         regularBlocks.forEach(block => {
             const cleanType = cleanBlockType(block.type);
             const textureKey = ALIASES[block.type] || block.type;
 
-            // 检查是否应使用 vanilla 模型渲染器
-            const useVanillaModel = vanillaBlockTypes.has(cleanType) ||
-                                   vanillaBlockTypes.has(`template_${cleanType}`);
+            // 优先检查是否是简单立方体方块
+            const isSimpleCube = SIMPLE_CUBE_BLOCKS.has(cleanType);
+
+            // 检查是否应使用 vanilla 模型渲染器（但简单立方体除外）
+            const useVanillaModel = !isSimpleCube && (
+                vanillaBlockTypes.has(cleanType) ||
+                vanillaBlockTypes.has(`template_${cleanType}`)
+            );
 
             if (useVanillaModel) {
                 if (!vanilla.has(cleanType)) vanilla.set(cleanType, []);
@@ -1885,6 +1920,14 @@ export default function VoxelWorld({ version = '1.20.1' }) {
 
     // Check if we should use ultra performance mode (no textures, just vertex colors)
     const useUltraPerformance = visibleBlocks.length > PERFORMANCE_THRESHOLD;
+
+    console.log('[VoxelWorld] About to render:', {
+        visibleBlocksCount: visibleBlocks.length,
+        texturedBlocksCount: blocksByTexture.size,
+        vanillaBlocksCount: vanillaBlocks.size,
+        useUltraPerformance,
+        lightSourcesCount: lightSources.length
+    });
 
     return (
         <group onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>

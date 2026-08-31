@@ -1,0 +1,262 @@
+Total messages: 50 (Errors: 9, Warnings: 2)
+Returning 179 messages for level "info"
+
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 5, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 5, texturedBlocksCount: 0, vanillaBlocksCount: 5, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 5, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 5, texturedBlocksCount: 0, vanillaBlocksCount: 5, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 5, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 5, texturedBlocksCount: 0, vanillaBlocksCount: 5, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 5, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 5, texturedBlocksCount: 0, vanillaBlocksCount: 5, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:20102
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/skills:0
+[ERROR] Failed to load skills: TypeError: Failed to fetch
+    at loadOfficialSkills (http://localhost:5174/src/components/SettingsModal.jsx:122:25)
+    at http://localhost:5174/src/components/SettingsModal.jsx:148:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11040:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11201:13)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13) @ http://localhost:5174/src/components/SettingsModal.jsx:143
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/sessions:0
+[WARNING] Failed to sync sessions: TypeError: Failed to fetch
+    at syncSessions (http://localhost:5174/src/store/useStore.js:1225:39)
+    at init (http://localhost:5174/src/App.jsx?t=1788144740016:422:13)
+    at http://localhost:5174/src/App.jsx?t=1788144740016:425:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11040:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11201:13) @ http://localhost:5174/src/store/useStore.js:1268
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144740016:1869
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/skills:0
+[ERROR] Failed to load skills: TypeError: Failed to fetch
+    at loadOfficialSkills (http://localhost:5174/src/components/SettingsModal.jsx:122:25)
+    at http://localhost:5174/src/components/SettingsModal.jsx:148:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11273:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11317:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11) @ http://localhost:5174/src/components/SettingsModal.jsx:143
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/sessions:0
+[WARNING] Failed to sync sessions: TypeError: Failed to fetch
+    at syncSessions (http://localhost:5174/src/store/useStore.js:1225:39)
+    at init (http://localhost:5174/src/App.jsx?t=1788144740016:422:13)
+    at http://localhost:5174/src/App.jsx?t=1788144740016:425:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11273:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11317:13) @ http://localhost:5174/src/store/useStore.js:1268
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:20102
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/skills:0
+[ERROR] Failed to load skills: TypeError: Failed to fetch
+    at loadOfficialSkills (http://localhost:5174/src/components/SettingsModal.jsx:122:25)
+    at http://localhost:5174/src/components/SettingsModal.jsx:148:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11040:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11201:13)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13) @ http://localhost:5174/src/components/SettingsModal.jsx:143
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/sessions:0
+[WARNING] Failed to sync sessions: TypeError: Failed to fetch
+    at syncSessions (http://localhost:5174/src/store/useStore.js:1225:39)
+    at init (http://localhost:5174/src/App.jsx?t=1788144820409:422:13)
+    at http://localhost:5174/src/App.jsx?t=1788144820409:425:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11040:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11010:13)
+    at commitPassiveMountOnFiber (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11201:13) @ http://localhost:5174/src/store/useStore.js:1268
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/skills:0
+[ERROR] Failed to load skills: TypeError: Failed to fetch
+    at loadOfficialSkills (http://localhost:5174/src/components/SettingsModal.jsx:122:25)
+    at http://localhost:5174/src/components/SettingsModal.jsx:148:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11273:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11317:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11) @ http://localhost:5174/src/components/SettingsModal.jsx:143
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[LOG] [VoxelWorld] ✅ COMPONENT CALLED! Version: 1.20.1 @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1564
+[LOG] [VoxelWorld] Rendering: {blocksCount: 0, viewMode: mc, controlMode: orbit, version: 1.20.1} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:1574
+[LOG] [VoxelWorld] About to render: {visibleBlocksCount: 0, texturedBlocksCount: 0, vanillaBlocksCount: 0, useUltraPerformance: false, lightSourcesCount: 0} @ http://localhost:5174/src/components/VoxelWorld.jsx?t=1788144820409:2011
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/sessions:0
+[WARNING] Failed to sync sessions: TypeError: Failed to fetch
+    at syncSessions (http://localhost:5174/src/store/useStore.js:1225:39)
+    at init (http://localhost:5174/src/App.jsx?t=1788144820409:422:13)
+    at http://localhost:5174/src/App.jsx?t=1788144820409:425:5
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:18567:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:997:72)
+    at commitHookEffectListMount (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:9465:60)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11273:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11240:11)
+    at reconnectPassiveEffects (http://localhost:5174/node_modules/.vite/deps/chunk-WVS2HFQN.js?v=71b20994:11317:13) @ http://localhost:5174/src/store/useStore.js:1268
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
+[ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:3001/api/heartbeat:0
