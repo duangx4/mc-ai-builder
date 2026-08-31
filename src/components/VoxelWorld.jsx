@@ -1760,17 +1760,39 @@ export default function VoxelWorld({ version = '1.20.1' }) {
 
     const isStair = (block) => block.type?.toLowerCase().includes('_stairs');
     const isWaterBlock = (block) => block.type === 'water' || block.type === 'flowing_water';
+    const isFenceOrWall = (block) => {
+        const cleanType = cleanBlockType(block.type);
+        return (cleanType.includes('_fence') && !cleanType.includes('fence_gate')) ||
+               (cleanType.includes('_wall') && !cleanType.startsWith('wall_'));
+    };
+    const isTorchOrLantern = (block) => {
+        const cleanType = cleanBlockType(block.type);
+        return (cleanType.includes('torch') && !cleanType.includes('torchflower')) ||
+               cleanType === 'lantern' || cleanType === 'soul_lantern';
+    };
 
-    const { stairBlocks, waterBlocks, regularBlocks } = useMemo(() => {
+    const { stairBlocks, waterBlocks, fenceWallBlocks, torchLanternBlocks, regularBlocks } = useMemo(() => {
         const stairs = [];
         const water = [];
+        const fenceWall = [];
+        const torchLantern = [];
         const regular = [];
+
         visibleBlocks.forEach(block => {
             if (isStair(block)) stairs.push(block);
             else if (isWaterBlock(block)) water.push(block);
+            else if (isFenceOrWall(block)) fenceWall.push(block);
+            else if (isTorchOrLantern(block)) torchLantern.push(block);
             else regular.push(block);
         });
-        return { stairBlocks: stairs, waterBlocks: water, regularBlocks: regular };
+
+        return {
+            stairBlocks: stairs,
+            waterBlocks: water,
+            fenceWallBlocks: fenceWall,
+            torchLanternBlocks: torchLantern,
+            regularBlocks: regular
+        };
     }, [visibleBlocks]);
 
     // 加载方块分类数据（用于判断是否使用 vanilla 模型渲染器）
@@ -1925,6 +1947,10 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         visibleBlocksCount: visibleBlocks.length,
         texturedBlocksCount: blocksByTexture.size,
         vanillaBlocksCount: vanillaBlocks.size,
+        fenceWallBlocksCount: fenceWallBlocks.length,
+        torchLanternBlocksCount: torchLanternBlocks.length,
+        stairBlocksCount: stairBlocks.length,
+        waterBlocksCount: waterBlocks.length,
         useUltraPerformance,
         lightSourcesCount: lightSources.length
     });
@@ -1977,7 +2003,7 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 />
             ))}
 
-            {/* Vanilla Multi-Element Blocks: 数据驱动渲染（锁链/酿造台/切石机/火把/灯笼等） */}
+            {/* Vanilla Multi-Element Blocks: 数据驱动渲染（锁链/酿造台/切石机等） */}
             {!useUltraPerformance && Array.from(vanillaBlocks.entries()).map(([blockType, blocksInGroup]) => (
                 <VanillaMultiElementBlocks
                     key={blockType}
@@ -1987,6 +2013,52 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                     version={version}
                 />
             ))}
+
+            {/* Render Fence/Wall blocks with connection logic */}
+            {!useUltraPerformance && (() => {
+                // 按类型分组（oak_fence, cobblestone_wall 等）
+                const groupedFenceWall = new Map();
+                fenceWallBlocks.forEach(block => {
+                    const cleanType = cleanBlockType(block.type);
+                    if (!groupedFenceWall.has(cleanType)) {
+                        groupedFenceWall.set(cleanType, []);
+                    }
+                    groupedFenceWall.get(cleanType).push(block);
+                });
+
+                return Array.from(groupedFenceWall.entries()).map(([blockType, blocksInGroup]) => (
+                    <FenceWallInstancedBlocks
+                        key={blockType}
+                        blocks={blocksInGroup}
+                        blockType={blockType}
+                        onBlockClick={safeSelectBlock}
+                        version={version}
+                    />
+                ));
+            })()}
+
+            {/* Render Torch/Lantern blocks with composite geometry */}
+            {!useUltraPerformance && (() => {
+                // 按类型分组（torch, lantern, soul_torch 等）
+                const groupedTorchLantern = new Map();
+                torchLanternBlocks.forEach(block => {
+                    const cleanType = cleanBlockType(block.type);
+                    if (!groupedTorchLantern.has(cleanType)) {
+                        groupedTorchLantern.set(cleanType, []);
+                    }
+                    groupedTorchLantern.get(cleanType).push(block);
+                });
+
+                return Array.from(groupedTorchLantern.entries()).map(([blockType, blocksInGroup]) => (
+                    <TorchLanternInstancedBlocks
+                        key={blockType}
+                        blocks={blocksInGroup}
+                        blockType={blockType}
+                        onBlockClick={safeSelectBlock}
+                        version={version}
+                    />
+                ));
+            })()}
 
             {/* Render water blocks with animation */}
             {!useUltraPerformance && waterBlocks.length > 0 && (
