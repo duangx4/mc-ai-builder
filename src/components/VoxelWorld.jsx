@@ -2128,6 +2128,94 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 </mesh>
             ))}
 
+            {/* ========== 新方块类型渲染 ========== */}
+
+            {/* 台阶 (Slabs) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.SLAB] && groupedBlocks[BlockRenderType.SLAB].length > 0 && (
+                <InstancedSlabBlocks
+                    blocks={groupedBlocks[BlockRenderType.SLAB]}
+                    blockType={groupedBlocks[BlockRenderType.SLAB][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                />
+            )}
+
+            {/* 玻璃方块 (透明渲染) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.GLASS] && groupedBlocks[BlockRenderType.GLASS].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.GLASS]}
+                    blockType={groupedBlocks[BlockRenderType.GLASS][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 植物 (交叉平面) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.PLANT] && groupedBlocks[BlockRenderType.PLANT].length > 0 && (
+                <CrossInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.PLANT]}
+                    onBlockClick={safeSelectBlock}
+                    version={version}
+                />
+            )}
+
+            {/* 地毯 */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.CARPET] && groupedBlocks[BlockRenderType.CARPET].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.CARPET]}
+                    blockType={groupedBlocks[BlockRenderType.CARPET][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 按钮和压力板 */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.BUTTON] && groupedBlocks[BlockRenderType.BUTTON].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.BUTTON]}
+                    blockType={groupedBlocks[BlockRenderType.BUTTON][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 红石和铁轨 */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.REDSTONE] && groupedBlocks[BlockRenderType.REDSTONE].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.REDSTONE]}
+                    blockType={groupedBlocks[BlockRenderType.REDSTONE][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 特殊方块（箱子、床等）暂时用普通方块渲染 */}
+            {!useUltraPerformance && [
+                BlockRenderType.CHEST,
+                BlockRenderType.BED,
+                BlockRenderType.FURNACE,
+                BlockRenderType.LADDER,
+                BlockRenderType.WORKSTATION,
+                BlockRenderType.GLOWING
+            ].map(type => {
+                const blocks = groupedBlocks[type];
+                if (!blocks || blocks.length === 0) return null;
+
+                return (
+                    <TexturedInstancedBlocks
+                        key={type}
+                        blocks={blocks}
+                        blockType={blocks[0]?.type}
+                        onBlockClick={safeSelectBlock}
+                        positionMap={positionMap}
+                        version={version}
+                    />
+                );
+            })}
+
             {/* 3D Transform Gizmo (Select & Move like Blender/3DSMax) */}
             {controlMode === 'orbit' && selectionCenter && (
                 <>
