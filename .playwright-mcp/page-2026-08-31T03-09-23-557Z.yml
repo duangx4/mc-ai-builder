@@ -1,0 +1,42 @@
+- generic [ref=f5e3]:
+  - generic [ref=f5e4]:
+    - generic [ref=f5e5]:
+      - generic [ref=f5e6]:
+        - heading "AI 建筑师" [level=1] [ref=f5e11]
+        - button "新对话" [ref=f5e12]
+      - generic [ref=f5e15]:
+        - button "直接导入" [ref=f5e16]
+        - button "设置" [ref=f5e21]
+        - button "导出" [ref=f5e26]
+    - generic [ref=f5e32]:
+      - button "对话" [ref=f5e33]
+      - button "历史会话" [ref=f5e34]
+    - generic [ref=f5e36]:
+      - generic [ref=f5e37]:
+        - generic [ref=f5e38]:
+          - button "建造模式" [ref=f5e39]
+          - button "视觉模式" [ref=f5e42]
+        - generic [ref=f5e51]:
+          - button "快速" [ref=f5e52]
+          - button "自定义" [ref=f5e55]
+          - button "🤖 自主" [ref=f5e58]
+          - button "智能构建" [ref=f5e59]
+      - generic [ref=f5e63]:
+        - button "✨ 优化提示词" [disabled] [ref=f5e65]
+        - generic [ref=f5e70]:
+          - button "上传图片" [ref=f5e71]
+          - textbox "描述你的构想..." [ref=f5e76]
+          - button [ref=f5e77]
+  - generic [ref=f5e81]:
+    - generic [ref=f5e82]:
+      - generic: "方块数: 0"
+      - button "白昼" [ref=f5e83]
+      - button "实景视图" [ref=f5e91]
+      - button "📐 投影" [ref=f5e97]
+    - generic [ref=f5e105]:
+      - button "编辑视角" [ref=f5e106]
+      - button "游戏视角" [ref=f5e109]
+    - generic:
+      - generic: L-CLICK ROTATE
+      - generic: M-CLICK PAN
+      - generic: SCROLL ZOOM

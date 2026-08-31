@@ -3431,19 +3431,28 @@ ${finalCode}
         <Canvas
           camera={{ position: [10, 8, 10], fov: apiSettings.fov || 75 }}
           shadows
+          frameloop="always"
+          gl={{ preserveDrawingBuffer: false }}
           className="cursor-grab active:cursor-grabbing"
           onCreated={(state) => {
             console.log('[Canvas] R3F Created!', {
               scene: state.scene.children.length,
               camera: state.camera.position,
-              renderer: !!state.gl
+              renderer: !!state.gl,
+              frameloop: state.frameloop
             });
 
-            // 修复：触发 resize 事件强制 R3F 渲染循环启动
-            // 这解决了初始加载时画布黑屏的问题
+            // 强制初始渲染
+            state.gl.render(state.scene, state.camera);
+            console.log('[Canvas] Forced initial render');
+
+            // 确保渲染循环启动
+            state.setFrameloop('always');
+
+            // 触发 resize 作为额外保险
             setTimeout(() => {
               window.dispatchEvent(new Event('resize'));
-              console.log('[Canvas] Triggered resize to kickstart rendering');
+              console.log('[Canvas] Triggered resize event');
             }, 100);
           }}
         >
