@@ -3428,7 +3428,18 @@ ${finalCode}
 
         <MinecraftHUD />
 
-        <Canvas camera={{ position: [10, 8, 10], fov: apiSettings.fov || 75 }} shadows className="cursor-grab active:cursor-grabbing">
+        <Canvas
+          camera={{ position: [10, 8, 10], fov: apiSettings.fov || 75 }}
+          shadows
+          className="cursor-grab active:cursor-grabbing"
+          onCreated={(state) => {
+            console.log('[Canvas] R3F Created!', {
+              scene: state.scene.children.length,
+              camera: state.camera.position,
+              renderer: !!state.gl
+            });
+          }}
+        >
           <color attach="background" args={[isDayMode ? '#a8d5f0' : '#0a0a0a']} />
           {/* 雾微调：白天 [40, 140]，夜间 [15, 60] */}
           <fog attach="fog" args={[isDayMode ? '#a8d5f0' : '#0a0a0a', isDayMode ? 40 : 15, isDayMode ? 140 : 60]} />

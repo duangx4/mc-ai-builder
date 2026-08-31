@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>R3F Minimal Test</title>
+  <style>
+    body { margin: 0; }
+    #root { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.2.0",
+      "react-dom": "https://esm.sh/react-dom@18.2.0",
+      "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+      "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.0",
+      "three": "https://esm.sh/three@0.160.0"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import { Canvas } from '@react-three/fiber';
+
+    function App() {
+      return React.createElement(Canvas, null,
+        React.createElement('color', { attach: 'background', args: ['#a8d5f0'] }),
+        React.createElement('ambientLight', { intensity: 0.5 }),
+        React.createElement('mesh', { position: [0, 0, 0] },
+          React.createElement('boxGeometry', { args: [2, 2, 2] }),
+          React.createElement('meshStandardMaterial', { color: 'red' })
+        )
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+
+    console.log('✅ R3F Minimal Test loaded');
+  </script>
+</body>
+</html>
