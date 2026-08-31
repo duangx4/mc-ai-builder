@@ -9,6 +9,12 @@ import { isCrossPlantBlock } from './plantGeometry';
 import { isButtonBlock, isPressurePlateBlock } from './buttonPlateGeometry';
 import { isCarpetBlock } from './carpetGeometry';
 import { isRedstoneBlock, isRailBlock } from './redstoneRailGeometry';
+import { isChestBlock, isBarrelBlock } from './chestGeometry';
+import { isBedBlock } from './bedGeometry';
+import { isFurnaceBlock } from './furnaceGeometry';
+import { isLadderBlock, isScaffoldingBlock } from './ladderScaffoldingGeometry';
+import { isGlowingBlock } from './glowingBlockGeometry';
+import { isWorkstationBlock } from './workstationGeometry';
 
 /**
  * 方块渲染类型枚举
@@ -31,7 +37,15 @@ export const BlockRenderType = {
   CARPET: 'carpet',          // 地毯
   REDSTONE: 'redstone',      // 红石
   RAIL: 'rail',              // 铁轨
-  SPECIAL: 'special'         // 特殊方块（需要自定义模型）
+  CHEST: 'chest',            // 箱子
+  BARREL: 'barrel',          // 桶
+  BED: 'bed',                // 床
+  FURNACE: 'furnace',        // 熔炉
+  LADDER: 'ladder',          // 梯子
+  SCAFFOLDING: 'scaffolding',// 脚手架
+  GLOWING: 'glowing',        // 发光方块
+  WORKSTATION: 'workstation',// 工作站
+  SPECIAL: 'special'         // 其他特殊方块
 };
 
 /**
@@ -120,6 +134,46 @@ export function getBlockRenderType(blockType) {
   // 铁轨
   if (isRailBlock(blockType)) {
     return BlockRenderType.RAIL;
+  }
+
+  // 箱子
+  if (isChestBlock(blockType)) {
+    return BlockRenderType.CHEST;
+  }
+
+  // 桶
+  if (isBarrelBlock(blockType)) {
+    return BlockRenderType.BARREL;
+  }
+
+  // 床
+  if (isBedBlock(blockType)) {
+    return BlockRenderType.BED;
+  }
+
+  // 熔炉
+  if (isFurnaceBlock(blockType)) {
+    return BlockRenderType.FURNACE;
+  }
+
+  // 梯子
+  if (isLadderBlock(blockType)) {
+    return BlockRenderType.LADDER;
+  }
+
+  // 脚手架
+  if (isScaffoldingBlock(blockType)) {
+    return BlockRenderType.SCAFFOLDING;
+  }
+
+  // 发光方块
+  if (isGlowingBlock(blockType)) {
+    return BlockRenderType.GLOWING;
+  }
+
+  // 工作站
+  if (isWorkstationBlock(blockType)) {
+    return BlockRenderType.WORKSTATION;
   }
 
   // 特殊方块

@@ -14,6 +14,18 @@ import { SlabBlock, InstancedSlabBlocks } from './SlabBlock';
 import { isGlassBlock, isGlassPaneBlock, getGlassMaterialProps, GLASS_BLOCKS, GLASS_PANE_BLOCKS } from '../utils/glassBlocks';
 import { createFenceGeometry, createWallGeometry, calculateConnections, parseFenceWallProperties } from '../utils/fenceWallGeometry';
 import { createDoorGeometry, createTrapdoorGeometry, parseDoorProperties, parseTrapdoorProperties } from '../utils/doorGeometry';
+import { BlockRenderType, getBlockRenderType, groupBlocksByRenderType, getBlockMaterialProps } from '../utils/blockClassifier';
+import { createTorchGeometry, createLanternGeometry, parseTorchProperties, parseLanternProperties } from '../utils/torchLanternGeometry';
+import { createCrossPlantGeometry } from '../utils/plantGeometry';
+import { createButtonGeometry, createPressurePlateGeometry, parseButtonProperties, parsePressurePlateProperties } from '../utils/buttonPlateGeometry';
+import { createCarpetGeometry } from '../utils/carpetGeometry';
+import { createFlatBlockGeometry } from '../utils/redstoneRailGeometry';
+import { createChestGeometry, createBarrelGeometry, parseChestProperties, parseBarrelProperties } from '../utils/chestGeometry';
+import { createBedGeometry, parseBedProperties } from '../utils/bedGeometry';
+import { createFurnaceGeometry, parseFurnaceProperties } from '../utils/furnaceGeometry';
+import { createLadderGeometry, createScaffoldingGeometry, parseLadderProperties } from '../utils/ladderScaffoldingGeometry';
+import { createBeaconGeometry, createConduitGeometry, createEndRodGeometry, createDragonEggGeometry, parseEndRodProperties } from '../utils/glowingBlockGeometry';
+import { createCraftingTableGeometry, createEnchantingTableGeometry, createBrewingStandGeometry, createAnvilGeometry, createCauldronGeometry } from '../utils/workstationGeometry';
 
 // 中文材质名支持：生成代码（尤其 opus5）常用中文直接写材质（如 "石砖"），
 // 在渲染表里补中文键，使后续所有 ALIASES[x]/FALLBACK_COLORS[x] 查询自动命中文名方块
