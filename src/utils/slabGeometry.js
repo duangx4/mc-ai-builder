@@ -36,8 +36,10 @@ export function createSlabGeometry(type = 'bottom') {
 /**
  * 解析台阶属性
  */
-export function parseSlabProperties(properties = {}) {
+export function parseSlabProperties(properties) {
+  // 防御性检查：properties 可能是 null 或 undefined
+  const props = properties || {};
   return {
-    type: properties.type || 'bottom'
+    type: props.type || 'bottom'
   };
 }

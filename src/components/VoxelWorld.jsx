@@ -1916,14 +1916,18 @@ export default function VoxelWorld({ version = '1.20.1' }) {
         let isUpsideDown = false;
 
         if (properties) {
+            // Handle both array and object formats
+            const propsArray = Array.isArray(properties) ? properties :
+                              (typeof properties === 'object' ? Object.entries(properties).map(([k, v]) => `${k}=${v}`) : []);
+
             // Check facing direction
-            if (properties.includes('facing=south')) rotation = 0;
-            else if (properties.includes('facing=west')) rotation = -Math.PI / 2;
-            else if (properties.includes('facing=north')) rotation = Math.PI;
-            else if (properties.includes('facing=east')) rotation = Math.PI / 2;
+            if (propsArray.some(p => p === 'facing=south' || p.includes('facing') && p.includes('south'))) rotation = 0;
+            else if (propsArray.some(p => p === 'facing=west' || p.includes('facing') && p.includes('west'))) rotation = -Math.PI / 2;
+            else if (propsArray.some(p => p === 'facing=north' || p.includes('facing') && p.includes('north'))) rotation = Math.PI;
+            else if (propsArray.some(p => p === 'facing=east' || p.includes('facing') && p.includes('east'))) rotation = Math.PI / 2;
 
             // Check if upside-down
-            isUpsideDown = properties.includes('half=top');
+            isUpsideDown = propsArray.some(p => p === 'half=top' || p.includes('half') && p.includes('top'));
         }
 
         return { rotation, isUpsideDown };

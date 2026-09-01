@@ -393,6 +393,12 @@ function App() {
 
   const t = (key) => TRANSLATIONS[language][key] || key;
 
+  // Expose store to window for testing
+  useEffect(() => {
+    window.__voxel_store = useStore;
+    console.log('🔧 Store exposed to window.__voxel_store for testing');
+  }, []);
+
   // Auto-focus camera on structure center when it changes
   useEffect(() => {
     // ONLY focus if we have actual blocks and the store is not empty and in Orbit mode

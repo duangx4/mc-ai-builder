@@ -11,4 +11,4 @@ if not exist %CHROME_PATH% (
 )
 
 echo Starting Chrome with debug port 9222...
-%CHROME_PATH% --remote-debugging-port=9222 --user-data-dir="%TEMP%\chrome-debug" http://localhost:5176
+%CHROME_PATH% --remote-debugging-port=9222 --user-data-dir="%TEMP%\chrome-debug" http://localhost:5175
