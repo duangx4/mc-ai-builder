@@ -2181,7 +2181,7 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 />
             )}
 
-            {/* 红石和铁轨 */}
+            {/* 红石 */}
             {!useUltraPerformance && groupedBlocks[BlockRenderType.REDSTONE] && groupedBlocks[BlockRenderType.REDSTONE].length > 0 && (
                 <TexturedInstancedBlocks
                     blocks={groupedBlocks[BlockRenderType.REDSTONE]}
@@ -2192,14 +2192,110 @@ export default function VoxelWorld({ version = '1.20.1' }) {
                 />
             )}
 
-            {/* 特殊方块（箱子、床等）暂时用普通方块渲染 */}
+            {/* 铁轨 */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.RAIL] && groupedBlocks[BlockRenderType.RAIL].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.RAIL]}
+                    blockType={groupedBlocks[BlockRenderType.RAIL][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 压力板 */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.PRESSURE_PLATE] && groupedBlocks[BlockRenderType.PRESSURE_PLATE].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.PRESSURE_PLATE]}
+                    blockType={groupedBlocks[BlockRenderType.PRESSURE_PLATE][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 栅栏 (Fences) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.FENCE] && groupedBlocks[BlockRenderType.FENCE].length > 0 && (
+                <MCModelInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.FENCE]}
+                    onBlockClick={safeSelectBlock}
+                    version={version}
+                />
+            )}
+
+            {/* 围墙 (Walls) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.WALL] && groupedBlocks[BlockRenderType.WALL].length > 0 && (
+                <MCModelInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.WALL]}
+                    onBlockClick={safeSelectBlock}
+                    version={version}
+                />
+            )}
+
+            {/* 玻璃板 (Glass Panes) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.GLASS_PANE] && groupedBlocks[BlockRenderType.GLASS_PANE].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.GLASS_PANE]}
+                    blockType={groupedBlocks[BlockRenderType.GLASS_PANE][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 门 (Doors) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.DOOR] && groupedBlocks[BlockRenderType.DOOR].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.DOOR]}
+                    blockType={groupedBlocks[BlockRenderType.DOOR][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 活板门 (Trapdoors) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.TRAPDOOR] && groupedBlocks[BlockRenderType.TRAPDOOR].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.TRAPDOOR]}
+                    blockType={groupedBlocks[BlockRenderType.TRAPDOOR][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 桶 (Barrels) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.BARREL] && groupedBlocks[BlockRenderType.BARREL].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.BARREL]}
+                    blockType={groupedBlocks[BlockRenderType.BARREL][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 脚手架 (Scaffolding) */}
+            {!useUltraPerformance && groupedBlocks[BlockRenderType.SCAFFOLDING] && groupedBlocks[BlockRenderType.SCAFFOLDING].length > 0 && (
+                <TexturedInstancedBlocks
+                    blocks={groupedBlocks[BlockRenderType.SCAFFOLDING]}
+                    blockType={groupedBlocks[BlockRenderType.SCAFFOLDING][0]?.type}
+                    onBlockClick={safeSelectBlock}
+                    positionMap={positionMap}
+                    version={version}
+                />
+            )}
+
+            {/* 特殊方块（箱子、床、熔炉等）暂时用普通方块渲染 */}
             {!useUltraPerformance && [
                 BlockRenderType.CHEST,
                 BlockRenderType.BED,
                 BlockRenderType.FURNACE,
                 BlockRenderType.LADDER,
                 BlockRenderType.WORKSTATION,
-                BlockRenderType.GLOWING
+                BlockRenderType.GLOWING,
+                BlockRenderType.SPECIAL
             ].map(type => {
                 const blocks = groupedBlocks[type];
                 if (!blocks || blocks.length === 0) return null;
