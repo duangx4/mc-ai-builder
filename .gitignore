@@ -41,3 +41,8 @@ Thumbs.db
 .kiro/
 .claude/
 .cursor/
+
+# Vendored third-party (prismarine-web-client clone + mineflayer render server)
+# NOT project source - never commit these (contain own node_modules / MC world data)
+web-client/
+render-server/
