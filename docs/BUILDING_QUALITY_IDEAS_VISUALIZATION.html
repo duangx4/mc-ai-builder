@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC AI Builder - 建筑质量提升方案可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 40px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: rgba(255,255,255,0.3);
+            transform: translateX(-50%);
+        }
+
+        .phase {
+            position: relative;
+            margin-bottom: 80px;
+        }
+
+        .phase-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 45%;
+            position: relative;
+        }
+
+        .phase:nth-child(odd) .phase-content {
+            margin-left: auto;
+            margin-right: 55%;
+        }
+
+        .phase:nth-child(even) .phase-content {
+            margin-left: 55%;
+        }
+
+        .phase-number {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 5px solid white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .phase h2 {
+            color: #667eea;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .phase h3 {
+            color: #764ba2;
+            font-size: 1.3rem;
+            margin: 20px 0 10px;
+        }
+
+        .phase p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .flow-diagram {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .flow-step {
+            padding: 8px 15px;
+            margin: 5px 0;
+            background: white;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .pros, .cons {
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .pros {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .cons {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .pros h4, .cons h4 {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .pros ul, .cons ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .pros li::before {
+            content: '✓ ';
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cons li::before {
+            content: '✗ ';
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .rating {
+            display: inline-block;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 5px 0 0;
+        }
+
+        .comparison-table {
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 40px 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .comparison-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-size: 1.1rem;
+        }
+
+        .comparison-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .status-recommended {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-explore {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .status-future {
+            background: #6c757d;
+            color: white;
+        }
+
+        .conclusion {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 60px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .conclusion h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .conclusion p {
+            color: #555;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .action-buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 30px;
+            }
+
+            .phase-content {
+                width: 100% !important;
+                margin-left: 60px !important;
+            }
+
+            .phase-number {
+                left: 30px !important;
+                transform: translateX(0) !important;
+            }
+
+            .pros-cons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏗️ MC AI Builder</h1>
+            <p>建筑质量提升方案可视化</p>
+        </div>
+
+        <div class="timeline">
+            <!-- 方案 1: Blueprint 模式 -->
+            <div class="phase">
+                <div class="phase-number">1</div>
+                <div class="phase-content">
+                    <h2>📋 Blueprint 模式</h2>
+                    <p><strong>核心思路：</strong>类似 Grillme Skill，在大型工程开始前拷问用户需求，生成详细施工计划，审批后再开工</p>
+
+                    <h3>工作流程</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step">1️⃣ Interactive Planning - 拷问用户详细需求</div>
+                        <div class="flow-step">2️⃣ Blueprint Generation - 生成图文并茂的施工计划</div>
+                        <div class="flow-step">3️⃣ User Approval - 用户审核批准</div>
+                        <div class="flow-step">4️⃣ Construction - 正式建造</div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>避免浪费（大型工程成本高）</li>
+                                <li>提升准确度（明确需求）</li>
+                                <li>增强信任（用户有掌控感）</li>
+                                <li>教育意义（学习建筑知识）</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>挑战</h4>
+                            <ul>
+                                <li>需要设计问答流程</li>
+                                <li>蓝图生成需要可视化</li>
+                                <li>增加用户交互步骤</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rating">⭐⭐⭐⭐⭐ 推荐优先</span>
+                        <span class="rating">⏱️ 2-3 天</span>
+                        <span class="rating">💰 成本可控</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 2: 视觉反馈模式 -->
+            <div class="phase">
+                <div class="phase-number">2</div>
+                <div class="phase-content">
+                    <h2>👁️ 视觉反馈驱动建造</h2>
+                    <p><strong>核心思路：</strong>AI 生成草图 → Vision AI 分析渲染图 → 生成改进提示词 → 多 Agent 精细建造</p>
+
+                    <h3>三轮迭代设计</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step">Round 1: 快速草图（10秒，低保真）</div>
+                        <div class="flow-step">Round 2: Vision AI 分析 → 结构优化</div>
+                        <div class="flow-step">Round 3: Multi-agent 细节完善</div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>AI "看着"自己生成的结果改进</li>
+                                <li>视觉反馈闭环</li>
+                                <li>创新性强，差异化优势</li>
+                                <li>质量提升明显</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>挑战</h4>
+                            <ul>
+                                <li>需要 Vision API（成本较高）</li>
+                                <li>截图时机控制</li>
+                                <li>实施复杂度高</li>
+                                <li>需要多轮迭代</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rating">⭐⭐⭐⭐ 创新但复杂</span>
+                        <span class="rating">⏱️ 1-2 周</span>
+                        <span class="rating">💰 成本较高</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 3: 体素生成 -->
+            <div class="phase">
+                <div class="phase-number">3</div>
+                <div class="phase-content">
+                    <h2>🎲 体素模型生成</h2>
+                    <p><strong>核心思路：</strong>文本 → 体素生成模型 → .vox 数据 → MC 方块映射</p>
+
+                    <h3>两种实现方式</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step"><strong>方式 1:</strong> 专门模型（Point-E/Shap-E）→ .vox 数据</div>
+                        <div class="flow-step"><strong>方式 2:</strong> LLM 生成 Three.js 代码堆叠方块</div>
+                    </div>
+
+                    <h3>关键洞察</h3>
+                    <p style="background: #fff3cd; padding: 15px; border-radius: 10px; border-left: 4px solid #ffc107;">
+                        <strong>你的发现：</strong>"体素模型生成能力是强的，弱的是把体素模型转化成 MC 对应方块的能力"
+                    </p>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>体素生成技术成熟</li>
+                                <li>3D 空间理解更好</li>
+                                <li>体素天然适配 MC</li>
+                                <li>可做独立工具（不限 MC）</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>挑战</h4>
+                            <ul>
+                                <li>颜色 → 材质映射复杂</li>
+                                <li>功能性方块缺失</li>
+                                <li>中式建筑细节表达受限</li>
+                                <li>需要集成外部 API</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rating">⭐⭐ 待办</span>
+                        <span class="rating">⏱️ 2-3 天验证</span>
+                        <span class="rating">💡 可做独立工具</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 4: 三阶段流程 -->
+            <div class="phase">
+                <div class="phase-number">4</div>
+                <div class="phase-content">
+                    <h2>🔄 三阶段质量保证</h2>
+                    <p><strong>核心思路：</strong>模拟真实建筑流程 - Planning → Building → Quality Check</p>
+
+                    <h3>阶段设计</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step">Stage 1: Planning - 查知识库、规划蓝图</div>
+                        <div class="flow-step">Stage 2: Building - 按蓝图建造</div>
+                        <div class="flow-step">Stage 3: Quality Check - 检查修复</div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>质量提升 50-70%</li>
+                                <li>基于现有技能系统</li>
+                                <li>风险低，易实施</li>
+                                <li>立即可用</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>挑战</h4>
+                            <ul>
+                                <li>速度略慢（+30%）</li>
+                                <li>成本增加（+20-30%）</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rating">⭐⭐⭐⭐ 稳定提升</span>
+                        <span class="rating">⏱️ 2-3 天</span>
+                        <span class="rating">💰 成本适中</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 方案 5: 多 Agent 协作 -->
+            <div class="phase">
+                <div class="phase-number">5</div>
+                <div class="phase-content">
+                    <h2>🤝 多 Agent 分区协作</h2>
+                    <p><strong>核心思路：</strong>大型建筑分解为多个区域 → 并行生成 → 统一整合</p>
+
+                    <h3>协作架构</h3>
+                    <div class="flow-diagram">
+                        <div class="flow-step">Planning Agent - 规划并分区</div>
+                        <div class="flow-step">Building Agents × N - 并行建造各区域</div>
+                        <div class="flow-step">Integration Agent - 整合连接</div>
+                        <div class="flow-step">Quality Agent - 质量检查</div>
+                    </div>
+
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <h4>优势</h4>
+                            <ul>
+                                <li>支持超大建筑（1000+ 方块）</li>
+                                <li>并行处理，速度快</li>
+                                <li>每个 Agent 专注细节</li>
+                                <li>失败隔离</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <h4>挑战</h4>
+                            <ul>
+                                <li>需要区域分割算法</li>
+                                <li>边界处理复杂</li>
+                                <li>成本高（多 agent）</li>
+                                <li>协调逻辑复杂</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="rating">⭐⭐⭐⭐⭐ 长期目标</span>
+                        <span class="rating">⏱️ 1 周</span>
+                        <span class="rating">💰 成本较高</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 对比表格 -->
+        <div class="comparison-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>方案</th>
+                        <th>质量提升</th>
+                        <th>速度影响</th>
+                        <th>成本</th>
+                        <th>实施难度</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Blueprint 模式</strong></td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>略慢</td>
+                        <td>+30%</td>
+                        <td>低</td>
+                        <td><span class="status-badge status-recommended">推荐优先</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>视觉反馈</strong></td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>慢</td>
+                        <td>+50%</td>
+                        <td>高</td>
+                        <td><span class="status-badge status-explore">技术探索</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>体素生成</strong></td>
+                        <td>⭐⭐⭐</td>
+                        <td>持平</td>
+                        <td>+40%</td>
+                        <td>中</td>
+                        <td><span class="status-badge status-explore">待办（独立工具）</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>三阶段流程</strong></td>
+                        <td>⭐⭐⭐⭐</td>
+                        <td>略慢</td>
+                        <td>+30%</td>
+                        <td>低</td>
+                        <td><span class="status-badge status-recommended">推荐</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>多 Agent 协作</strong></td>
+                        <td>⭐⭐⭐⭐⭐</td>
+                        <td>快（并行）</td>
+                        <td>+50%</td>
+                        <td>高</td>
+                        <td><span class="status-badge status-future">第二阶段</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 结论 -->
+        <div class="conclusion">
+            <h2>🎯 实施建议</h2>
+            <p>
+                <strong>立即开始：</strong>Blueprint 模式 + 三阶段流程（2 个方案可并行或顺序）<br>
+                这两个方案风险低、实施快、质量提升明显
+            </p>
+            <p>
+                <strong>并行探索：</strong>视觉反馈模式的 MVP（技术验证）<br>
+                创新性强，可作为长期竞争优势
+            </p>
+            <p>
+                <strong>待办项目：</strong>体素生成工具（可做独立产品）<br>
+                不局限于 MC，有更广泛的应用场景
+            </p>
+            <p>
+                <strong>长期目标：</strong>多 Agent 协作系统<br>
+                支持超大型建筑，终极质量保证
+            </p>
+
+            <div class="action-buttons">
+                <a href="#" class="btn btn-primary">开始实施 Blueprint 模式</a>
+                <a href="#" class="btn btn-secondary">查看详细设计文档</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
