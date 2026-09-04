@@ -3567,14 +3567,6 @@ ${finalCode}
           {/* 调试相机助手 */}
           <CameraDebugHelper />
 
-          {/* 测试立方体 - 验证 R3F 渲染是否工作 */}
-          <mesh position={[0, 5, 0]}>
-            <boxGeometry args={[2, 2, 2]} />
-            <meshBasicMaterial color="red" />
-          </mesh>
-          <axesHelper args={[10]} />
-          <gridHelper args={[20, 20]} />
-
           <VoxelWorld version={selectedVersion} />
         </Canvas>
 
