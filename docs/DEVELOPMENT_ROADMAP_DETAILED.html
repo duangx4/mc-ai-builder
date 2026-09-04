@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC AI Builder - 后续开发任务规划</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #1e3c72;
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.2rem;
+        }
+
+        .priority-section {
+            margin-bottom: 40px;
+        }
+
+        .priority-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .priority-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .priority-header p {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .p1-header {
+            border-left: 8px solid #dc3545;
+        }
+
+        .p1-header h2 {
+            color: #dc3545;
+        }
+
+        .p2-header {
+            border-left: 8px solid #ffc107;
+        }
+
+        .p2-header h2 {
+            color: #e67e22;
+        }
+
+        .p3-header {
+            border-left: 8px solid #28a745;
+        }
+
+        .p3-header h2 {
+            color: #28a745;
+        }
+
+        .task-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+        }
+
+        .task-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .task-title {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .task-title h3 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #1e3c72;
+        }
+
+        .task-title p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .badge-time {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-difficulty {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .badge-impact {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .task-body {
+            margin-top: 20px;
+        }
+
+        .task-section {
+            margin-bottom: 20px;
+        }
+
+        .task-section h4 {
+            color: #2a5298;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .task-list li {
+            padding: 10px 10px 10px 35px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .task-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 12px;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .subtask-list {
+            list-style: none;
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+
+        .subtask-list li {
+            padding: 8px 10px 8px 30px;
+            margin-bottom: 5px;
+            background: #ffffff;
+            border-left: 3px solid #667eea;
+            font-size: 0.95rem;
+        }
+
+        .subtask-list li::before {
+            content: '→';
+            position: absolute;
+            left: 10px;
+            color: #667eea;
+        }
+
+        .dependencies {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .dependencies h5 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tech-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+
+        .deliverables {
+            background: #e8f5e9;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .deliverables h5 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .timeline-visual {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .timeline-visual h2 {
+            color: #1e3c72;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .gantt-container {
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .gantt-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            min-width: 1200px;
+        }
+
+        .gantt-label {
+            width: 300px;
+            font-weight: bold;
+            padding-right: 20px;
+        }
+
+        .gantt-bar-container {
+            flex: 1;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .gantt-bar {
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .gantt-p1 {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .gantt-p2 {
+            background: linear-gradient(90deg, #ffc107 0%, #e0a800 100%);
+        }
+
+        .gantt-p3 {
+            background: linear-gradient(90deg, #28a745 0%, #218838 100%);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .summary-card h3 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .summary-card.p1 h3 {
+            color: #dc3545;
+        }
+
+        .summary-card.p2 h3 {
+            color: #ffc107;
+        }
+
+        .summary-card.p3 h3 {
+            color: #28a745;
+        }
+
+        .summary-card p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .risk-warning {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .risk-warning h5 {
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .task-header {
+                flex-direction: column;
+            }
+
+            .gantt-label {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📋 后续开发任务规划</h1>
+            <p>按优先级 P1/P2/P3 划分的完整开发路线图</p>
+            <p style="margin-top: 10px; color: #999;">更新日期: 2026-09-04</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card p1">
+                <h3>7个</h3>
+                <p>P1 高优先级任务</p>
+            </div>
+            <div class="summary-card p2">
+                <h3>5个</h3>
+                <p>P2 中优先级任务</p>
+            </div>
+            <div class="summary-card p3">
+                <h3>3个</h3>
+                <p>P3 低优先级任务</p>
+            </div>
+            <div class="summary-card">
+                <h3>2-3周</h3>
+                <p>P1 完成时间</p>
+            </div>
+        </div>
+
+        <!-- Gantt Chart -->
+        <div class="timeline-visual">
+            <h2>📅 开发时间线（甘特图）</h2>
+            <div class="gantt-container">
+                <div class="gantt-row">
+                    <div class="gantt-label">P1.1 模式选择器 UI</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p1" style="width: 15%; margin-left: 0;">2天</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P1.2 智能推荐系统</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p1" style="width: 10%; margin-left: 15%;">1天</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P1.3 区域选择工具</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p1" style="width: 20%; margin-left: 15%;">2天</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P1.4 智能模式 Workflow</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p1" style="width: 30%; margin-left: 35%;">3天</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P1.5 蓝图模式 Workflow</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p1" style="width: 35%; margin-left: 65%;">5天</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P2.1 极致模式</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p2" style="width: 50%; margin-left: 0;">1周</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P2.2 多 Agent 协作</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p2" style="width: 50%; margin-left: 50%;">1周</div>
+                    </div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">P3.1 体素生成工具</div>
+                    <div class="gantt-bar-container">
+                        <div class="gantt-bar gantt-p3" style="width: 40%; margin-left: 0;">独立项目</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- P1 Tasks -->
+        <div class="priority-section">
+            <div class="priority-header p1-header">
+                <h2>🔴 P1 - 高优先级（立即开始）</h2>
+                <p>核心功能，必须完成才能上线。预计 2-3 周完成。</p>
+            </div>
+
+            <!-- P1.1 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.1 - 模式选择器 UI 组件</h3>
+                        <p>用户界面的核心入口，所有模式的起点</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 2天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 极高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>创建模式选择器组件，允许用户在五种模式中选择，提供智能推荐功能。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>设计模式选择器界面（5个模式卡片）
+                                <ul class="subtask-list">
+                                    <li>快速模式卡片（⚡ 图标，< 500 方块）</li>
+                                    <li>智能模式卡片（🎨 图标，推荐标签）</li>
+                                    <li>蓝图模式卡片（📐 图标，大型建筑）</li>
+                                    <li>极致模式卡片（🚀 图标，超大建筑）</li>
+                                    <li>精确修改卡片（🎯 图标，局部调整）</li>
+                                </ul>
+                            </li>
+                            <li>实现模式切换逻辑</li>
+                            <li>添加智能推荐按钮</li>
+                            <li>显示预估时间和成本</li>
+                            <li>响应式设计（移动端适配）</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">React</span>
+                            <span class="tech-tag">JSX</span>
+                            <span class="tech-tag">Zustand</span>
+                            <span class="tech-tag">CSS-in-JS</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/components/ModeSelector.jsx</li>
+                            <li>相关样式文件</li>
+                            <li>集成到 App.jsx</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.2 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.2 - 智能推荐系统</h3>
+                        <p>基于提示词分析和方块估算的推荐算法</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现智能推荐算法，根据用户输入自动推荐最适合的模式。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>实现方块数量估算算法
+                                <ul class="subtask-list">
+                                    <li>建筑类型识别（帐篷、房子、城堡、宫殿...）</li>
+                                    <li>修饰词权重（大型×2、简单×0.7、精致×1.5）</li>
+                                    <li>基准数量映射</li>
+                                </ul>
+                            </li>
+                            <li>实现关键词检测</li>
+                            <li>实现模式推荐逻辑（< 500 → 快速，500-1500 → 智能...）</li>
+                            <li>添加推荐置信度评分</li>
+                            <li>单元测试</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">JavaScript</span>
+                            <span class="tech-tag">正则表达式</span>
+                            <span class="tech-tag">Vitest</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/utils/modeRecommender.js</li>
+                            <li>src/utils/blockEstimator.js</li>
+                            <li>测试文件</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.3 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.3 - 区域选择工具（精确修改模式）</h3>
+                        <p>3D 空间交互，框选特定区域</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 2天</span>
+                        <span class="badge badge-difficulty">难度: 高</span>
+                        <span class="badge badge-impact">影响: 高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现 3D 区域选择工具，支持拖动框选、实时预览、边界高亮。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>实现 RegionSelector 类
+                                <ul class="subtask-list">
+                                    <li>鼠标拖动检测</li>
+                                    <li>3D 坐标转换</li>
+                                    <li>边界框计算</li>
+                                    <li>BoxHelper 可视化</li>
+                                </ul>
+                            </li>
+                            <li>实现选中区域信息显示（方块数量、尺寸）</li>
+                            <li>实现确认/取消/重选按钮</li>
+                            <li>上下文分析（获取周围方块）</li>
+                            <li>边界平滑算法</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Three.js</span>
+                            <span class="tech-tag">@react-three/fiber</span>
+                            <span class="tech-tag">BoxHelper</span>
+                            <span class="tech-tag">Raycaster</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/utils/RegionSelector.js</li>
+                            <li>src/components/RegionSelectionUI.jsx</li>
+                            <li>集成到 VoxelWorld</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.4 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.4 - 智能模式三阶段 Workflow</h3>
+                        <p>Planning → Building → Quality Check</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 3天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 极高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现智能模式的三阶段工作流，显著提升建筑质量（预期 50-70%）。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>创建 smart-building.js Workflow</li>
+                            <li>Phase 1: Planning Agent
+                                <ul class="subtask-list">
+                                    <li>调用 /knowledge 技能查询风格</li>
+                                    <li>生成详细蓝图 JSON</li>
+                                    <li>规划尺寸、材料、特征</li>
+                                </ul>
+                            </li>
+                            <li>Phase 2: Building Phase
+                                <ul class="subtask-list">
+                                    <li>按蓝图生成 VoxelBuilder 代码</li>
+                                    <li>结构化、分层建造</li>
+                                </ul>
+                            </li>
+                            <li>Phase 3: Quality Check Agent
+                                <ul class="subtask-list">
+                                    <li>检查结构完整性</li>
+                                    <li>验证风格一致性</li>
+                                    <li>修复发现的问题</li>
+                                </ul>
+                            </li>
+                            <li>进度展示 UI</li>
+                            <li>错误处理和重试机制</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Workflow 系统</span>
+                            <span class="tech-tag">Agent V2</span>
+                            <span class="tech-tag">技能系统</span>
+                            <span class="tech-tag">Claude API</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>.claude/workflows/smart-building.js</li>
+                            <li>src/agents/PlanningAgent.js</li>
+                            <li>src/agents/QualityAgent.js</li>
+                            <li>进度追踪 UI 组件</li>
+                        </ul>
+                    </div>
+
+                    <div class="dependencies">
+                        <h5>⚠️ 依赖项</h5>
+                        <p>需要先完成 P1.1（模式选择器）和 P1.2（智能推荐）</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.5 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.5 - 蓝图模式 Workflow</h3>
+                        <p>交互式规划 → 用户审批 → 建造</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 5天</span>
+                        <span class="badge badge-difficulty">难度: 高</span>
+                        <span class="badge badge-impact">影响: 极高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现蓝图模式，通过交互问答收集需求，生成可视化施工计划，用户审批后建造。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>创建 blueprint-planning skill
+                                <ul class="subtask-list">
+                                    <li>5个核心问题设计</li>
+                                    <li>问答流程实现</li>
+                                    <li>需求 JSON 生成</li>
+                                </ul>
+                            </li>
+                            <li>蓝图生成器
+                                <ul class="subtask-list">
+                                    <li>ASCII 平面图生成</li>
+                                    <li>材料清单统计</li>
+                                    <li>施工顺序规划</li>
+                                    <li>时间和成本估算</li>
+                                </ul>
+                            </li>
+                            <li>蓝图展示 UI
+                                <ul class="subtask-list">
+                                    <li>BlueprintViewer 组件</li>
+                                    <li>审批按钮（批准/修改/取消）</li>
+                                    <li>修改需求流程</li>
+                                </ul>
+                            </li>
+                            <li>建造执行（基于审批的蓝图）</li>
+                            <li>Workflow 暂停/恢复机制</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Workflow 系统</span>
+                            <span class="tech-tag">技能系统</span>
+                            <span class="tech-tag">React</span>
+                            <span class="tech-tag">ASCII Art</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>.claude/skills/blueprint-planning/skill.md</li>
+                            <li>.claude/workflows/blueprint-building.js</li>
+                            <li>src/components/BlueprintViewer.jsx</li>
+                            <li>src/utils/blueprintGenerator.js</li>
+                        </ul>
+                    </div>
+
+                    <div class="dependencies">
+                        <h5>⚠️ 依赖项</h5>
+                        <p>需要先完成 P1.4（智能模式），复用三阶段中的 Planning 和 Building 逻辑</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.6 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.6 - 精确修改模式 Workflow</h3>
+                        <p>区域分析 → 上下文匹配 → 重建</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 2天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现精确修改模式工作流，只重建选中区域，自动匹配周围风格。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>创建 precision-editing.js Workflow</li>
+                            <li>上下文分析算法
+                                <ul class="subtask-list">
+                                    <li>提取选中区域内的方块</li>
+                                    <li>分析周围 2 格内的方块</li>
+                                    <li>材质统计和风格推断</li>
+                                </ul>
+                            </li>
+                            <li>生成提示词增强
+                                <ul class="subtask-list">
+                                    <li>添加"仅在选中区域内"约束</li>
+                                    <li>添加"匹配周围风格"指令</li>
+                                    <li>提供材质建议</li>
+                                </ul>
+                            </li>
+                            <li>边界平滑处理</li>
+                            <li>Before/After 对比 UI</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Workflow 系统</span>
+                            <span class="tech-tag">算法设计</span>
+                            <span class="tech-tag">React</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>.claude/workflows/precision-editing.js</li>
+                            <li>src/utils/contextAnalyzer.js</li>
+                            <li>src/components/ComparisonViewer.jsx</li>
+                        </ul>
+                    </div>
+
+                    <div class="dependencies">
+                        <h5>⚠️ 依赖项</h5>
+                        <p>需要先完成 P1.3（区域选择工具）</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P1.7 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P1.7 - 集成测试和优化</h3>
+                        <p>端到端测试，性能优化，用户体验完善</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 3天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>全面测试五种模式，优化性能，完善错误处理和用户体验。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>端到端测试
+                                <ul class="subtask-list">
+                                    <li>每种模式生成 5 种不同建筑</li>
+                                    <li>边界情况测试</li>
+                                    <li>错误恢复测试</li>
+                                </ul>
+                            </li>
+                            <li>性能优化
+                                <ul class="subtask-list">
+                                    <li>减少不必要的渲染</li>
+                                    <li>优化 Workflow 调用</li>
+                                    <li>缓存智能推荐结果</li>
+                                </ul>
+                            </li>
+                            <li>用户体验完善
+                                <ul class="subtask-list">
+                                    <li>加载动画</li>
+                                    <li>错误提示优化</li>
+                                    <li>成功提示和庆祝动画</li>
+                                </ul>
+                            </li>
+                            <li>文档更新</li>
+                        </ul>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>测试报告</li>
+                            <li>性能优化报告</li>
+                            <li>用户手册更新</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- P2 Tasks -->
+        <div class="priority-section">
+            <div class="priority-header p2-header">
+                <h2>🟡 P2 - 中优先级（P1 完成后）</h2>
+                <p>高级功能，显著提升竞争力。预计 2-3 周完成。</p>
+            </div>
+
+            <!-- P2.1 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P2.1 - 极致模式（视觉反馈系统）</h3>
+                        <p>蓝图 → 草图 → Vision AI 分析 → 改进</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1周</span>
+                        <span class="badge badge-difficulty">难度: 高</span>
+                        <span class="badge badge-impact">影响: 高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现极致模式的视觉反馈系统，AI 看着自己生成的结果进行改进。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>截图系统
+                                <ul class="subtask-list">
+                                    <li>等待渲染完成</li>
+                                    <li>调整相机到最佳角度</li>
+                                    <li>多角度截图（前/顶/透视）</li>
+                                </ul>
+                            </li>
+                            <li>Vision AI 分析
+                                <ul class="subtask-list">
+                                    <li>布局分析</li>
+                                    <li>风格符合度</li>
+                                    <li>结构问题识别</li>
+                                    <li>改进建议生成</li>
+                                </ul>
+                            </li>
+                            <li>改进提示词生成</li>
+                            <li>三轮迭代机制</li>
+                            <li>质量评分系统</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Vision API</span>
+                            <span class="tech-tag">Canvas/WebGL</span>
+                            <span class="tech-tag">Claude Sonnet 3.5</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/utils/screenshotCapture.js</li>
+                            <li>src/agents/VisionAnalysisAgent.js</li>
+                            <li>.claude/workflows/ultra-building.js（完整版）</li>
+                        </ul>
+                    </div>
+
+                    <div class="risk-warning">
+                        <h5>⚠️ 风险提示</h5>
+                        <p>Vision API 成本较高（~$0.05/次），需要实现成本控制和质量阈值。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P2.2 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P2.2 - 多 Agent 并行协作系统</h3>
+                        <p>区域分割 → 并行建造 → 智能整合</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1周</span>
+                        <span class="badge badge-difficulty">难度: 极高</span>
+                        <span class="badge badge-impact">影响: 极高</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现多 Agent 协作系统，支持超大型建筑（> 2500 方块）的并行建造。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>区域分割算法
+                                <ul class="subtask-list">
+                                    <li>根据蓝图自动分区</li>
+                                    <li>平衡各区域复杂度</li>
+                                    <li>标识边界接口</li>
+                                </ul>
+                            </li>
+                            <li>并行建造协调
+                                <ul class="subtask-list">
+                                    <li>多 Agent 任务分发</li>
+                                    <li>进度追踪</li>
+                                    <li>失败重试</li>
+                                </ul>
+                            </li>
+                            <li>整合系统
+                                <ul class="subtask-list">
+                                    <li>合并多个区域代码</li>
+                                    <li>边界连接处理</li>
+                                    <li>冲突解决</li>
+                                    <li>添加过渡元素</li>
+                                </ul>
+                            </li>
+                            <li>质量验证（整体一致性）</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Workflow 系统</span>
+                            <span class="tech-tag">Promise.all</span>
+                            <span class="tech-tag">算法设计</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/utils/regionDivider.js</li>
+                            <li>src/agents/IntegrationAgent.js</li>
+                            <li>src/utils/boundaryProcessor.js</li>
+                        </ul>
+                    </div>
+
+                    <div class="risk-warning">
+                        <h5>⚠️ 风险提示</h5>
+                        <p>边界处理复杂，可能出现不连贯。需要大量测试和调优。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P2.3 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P2.3 - 用户偏好学习系统</h3>
+                        <p>记录用户历史，优化推荐算法</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 2天</span>
+                        <span class="badge badge-difficulty">难度: 低</span>
+                        <span class="badge badge-impact">影响: 中</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>记录用户的模式选择和满意度，逐步优化智能推荐算法。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>历史记录系统（LocalStorage）</li>
+                            <li>满意度反馈按钮</li>
+                            <li>偏好模式统计</li>
+                            <li>推荐算法优化（基于历史）</li>
+                        </ul>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/utils/userPreferences.js</li>
+                            <li>更新 modeRecommender.js</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P2.4 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P2.4 - 蓝图模板系统</h3>
+                        <p>保存和复用满意的蓝图</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 2天</span>
+                        <span class="badge badge-difficulty">难度: 低</span>
+                        <span class="badge badge-impact">影响: 中</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>允许用户保存满意的蓝图作为模板，下次直接复用。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>保存蓝图功能</li>
+                            <li>模板库 UI</li>
+                            <li>加载模板功能</li>
+                            <li>编辑模板功能</li>
+                        </ul>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>src/components/BlueprintLibrary.jsx</li>
+                            <li>src/utils/blueprintStorage.js</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P2.5 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P2.5 - 修复新渲染器材质问题</h3>
+                        <p>完成 P3 Phase 2 VoxelWorld 集成</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 3天</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 中</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>修复新统一渲染器的材质加载问题，完成 VoxelWorld 集成。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>诊断 MaterialManager 材质共享问题</li>
+                            <li>修复纹理加载逻辑</li>
+                            <li>确保每个方块类型有独立材质</li>
+                            <li>重新集成到 VoxelWorld</li>
+                            <li>测试 27+ 种方块类型</li>
+                        </ul>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>修复后的 MaterialManager.js</li>
+                            <li>更新的 VoxelWorld.jsx</li>
+                            <li>测试报告</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- P3 Tasks -->
+        <div class="priority-section">
+            <div class="priority-header p3-header">
+                <h2>🟢 P3 - 低优先级（长期规划）</h2>
+                <p>探索性功能和独立项目，不影响核心功能。</p>
+            </div>
+
+            <!-- P3.1 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P3.1 - 体素生成工具（独立项目）</h3>
+                        <p>LLM 生成体素模型 → MC 方块映射</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1周+</span>
+                        <span class="badge badge-difficulty">难度: 高</span>
+                        <span class="badge badge-impact">影响: 低（独立）</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>探索体素生成技术，可作为独立工具开发，不局限于 MC 建筑生成。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>调研 Point-E / Shap-E 等体素生成模型</li>
+                            <li>实现 API 集成（Replicate）</li>
+                            <li>实现体素 → MC 方块映射算法</li>
+                            <li>颜色聚类和材质推断</li>
+                            <li>作为独立工具发布</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>🛠️ 技术栈</h4>
+                        <div class="tech-stack">
+                            <span class="tech-tag">Point-E</span>
+                            <span class="tech-tag">Replicate API</span>
+                            <span class="tech-tag">K-means 聚类</span>
+                        </div>
+                    </div>
+
+                    <div class="deliverables">
+                        <h5>📦 交付物</h5>
+                        <ul class="task-list">
+                            <li>独立的 voxel-generator 工具</li>
+                            <li>体素 → MC 映射库</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P3.2 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P3.2 - 纹理系统完善（P3 Phase 3）</h3>
+                        <p>Atlas 优化、动画纹理、PBR 材质</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1-2周</span>
+                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-impact">影响: 中</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>完善纹理系统，支持动画纹理（水、岩浆）和 PBR 材质。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>完整 Atlas 支持</li>
+                            <li>动画纹理系统（UV offset 动画）</li>
+                            <li>纹理 UV 变换</li>
+                            <li>PBR 材质支持</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- P3.3 -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-title">
+                        <h3>P3.3 - 方块状态系统（P3 Phase 4）</h3>
+                        <p>交互功能：开门、按钮、红石等</p>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-time">⏱️ 1-2周</span>
+                        <span class="badge badge-difficulty">难度: 高</span>
+                        <span class="badge badge-impact">影响: 中</span>
+                    </div>
+                </div>
+
+                <div class="task-body">
+                    <div class="task-section">
+                        <h4>📝 任务描述</h4>
+                        <p>实现方块状态系统，支持交互功能（开门、按钮、拉杆等）。</p>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体任务</h4>
+                        <ul class="task-list">
+                            <li>BlockStateManager</li>
+                            <li>BlockInteraction 系统</li>
+                            <li>门、按钮、拉杆交互</li>
+                            <li>红石基础逻辑</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="section" style="text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h2 style="color: white; border: none; font-size: 2.5rem; margin-bottom: 20px;">🎯 实施建议</h2>
+            <p style="font-size: 1.3rem; margin-bottom: 30px; opacity: 0.9;">
+                按照 P1 → P2 → P3 的顺序逐步实施，<br>
+                优先完成核心功能，再添加高级特性。
+            </p>
+            <div style="font-size: 3rem; margin: 30px 0;">
+                📋 → 🚀 → ✨
+            </div>
+            <p style="font-size: 1.1rem; opacity: 0.8;">
+                预计 P1 完成后即可上线，P2/P3 可持续迭代。<br>
+                报告生成时间: 2026-09-04
+            </p>
+        </div>
+    </div>
+</body>
+</html>

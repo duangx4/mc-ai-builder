@@ -28,6 +28,7 @@ import MinecraftControls from './components/MinecraftControls';
 import MinecraftHUD from './components/MinecraftHUD';
 import { MousePointer2, Plane } from 'lucide-react';
 import PromptOptimizer from './components/PromptOptimizer';
+import ModeSelector from './components/ModeSelector';
 
 /**
  * @typedef {Object} Variant
@@ -3282,6 +3283,18 @@ ${finalCode}
           )}
 
           <div className="relative group">
+            {/* Mode Selector - Above input */}
+            <ModeSelector
+              currentMode={generationMode}
+              onModeChange={(mode) => {
+                setGenerationMode(mode);
+                console.log('[App] Mode changed to:', mode);
+              }}
+              blockEstimate={0} // TODO: 实现方块数量估算
+              recommendedMode={null} // TODO: 实现智能推荐
+              language={language}
+            />
+
             {/* Prompt Optimizer - Above input */}
             <PromptOptimizer
               inputText={inputText}
