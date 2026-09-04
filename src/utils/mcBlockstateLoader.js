@@ -37,11 +37,50 @@ function evaluateCondition(when, blockProperties) {
 }
 
 /**
+ * 从模型数组中选择一个（支持权重随机）
+ *
+ * @param {Array} models - 模型数组，每个可能包含 weight 属性
+ * @returns {Object} 选中的模型
+ */
+function selectModelWithWeight(models) {
+    if (!Array.isArray(models) || models.length === 0) {
+        return null;
+    }
+
+    if (models.length === 1) {
+        return models[0];
+    }
+
+    // 检查是否有权重
+    const hasWeight = models.some(m => m.weight !== undefined);
+
+    if (!hasWeight) {
+        // 无权重，随机选择
+        return models[Math.floor(Math.random() * models.length)];
+    }
+
+    // 有权重，按权重随机选择
+    const totalWeight = models.reduce((sum, m) => sum + (m.weight || 1), 0);
+    let random = Math.random() * totalWeight;
+
+    for (const model of models) {
+        const weight = model.weight || 1;
+        random -= weight;
+        if (random <= 0) {
+            return model;
+        }
+    }
+
+    // 兜底返回最后一个
+    return models[models.length - 1];
+}
+
+/**
  * 解析 blockstate JSON 并返回适用的模型列表
  *
  * @param {Object} blockstateJson - blockstate JSON 对象
  * @param {Object} blockProperties - 方块属性
- * @returns {Array<{model: string, x: number, y: number, uvlock: boolean}>}
+ * @returns {Array<{model: string, x: number, y: number, uvlock: boolean, weight: number}>}
  */
 export function parseBlockstate(blockstateJson, blockProperties = {}) {
     const { multipart, variants } = blockstateJson;
@@ -58,15 +97,18 @@ export function parseBlockstate(blockstateJson, blockProperties = {}) {
                 // apply 可以是单个对象或数组（随机选择）
                 const models = Array.isArray(apply) ? apply : [apply];
 
-                // 简化：取第一个（完整实现应该支持随机选择和权重）
-                const model = models[0];
+                // 支持权重随机选择
+                const model = selectModelWithWeight(models);
 
-                applicableModels.push({
-                    model: model.model,
-                    x: model.x || 0,
-                    y: model.y || 0,
-                    uvlock: model.uvlock || false
-                });
+                if (model) {
+                    applicableModels.push({
+                        model: model.model,
+                        x: model.x || 0,
+                        y: model.y || 0,
+                        uvlock: model.uvlock || false,
+                        weight: model.weight || 1
+                    });
+                }
             }
         });
     } else if (variants) {
@@ -82,14 +124,19 @@ export function parseBlockstate(blockstateJson, blockProperties = {}) {
 
         if (variantDef) {
             const models = Array.isArray(variantDef) ? variantDef : [variantDef];
-            const model = models[0];
 
-            applicableModels.push({
-                model: model.model,
-                x: model.x || 0,
-                y: model.y || 0,
-                uvlock: model.uvlock || false
-            });
+            // 支持权重随机选择
+            const model = selectModelWithWeight(models);
+
+            if (model) {
+                applicableModels.push({
+                    model: model.model,
+                    x: model.x || 0,
+                    y: model.y || 0,
+                    uvlock: model.uvlock || false,
+                    weight: model.weight || 1
+                });
+            }
         }
     }
 
@@ -202,12 +249,44 @@ function canConnect(blockType, neighborType, direction) {
 }
 
 /**
+ * 应用 UV lock（旋转时保持 UV 坐标不变）
+ *
+ * @param {THREE.BufferGeometry} geometry - 几何体
+ * @param {number} rotationY - Y 轴旋转角度（度）
+ */
+function applyUVLock(geometry, rotationY) {
+    if (rotationY === 0 || !geometry.attributes.uv) {
+        return;
+    }
+
+    const uvAttribute = geometry.attributes.uv;
+    const uvArray = uvAttribute.array;
+
+    // UV lock 的作用：当方块旋转时，纹理保持不旋转
+    // 实现方式：对 UV 坐标应用反向旋转
+    const angleRad = -(rotationY * Math.PI) / 180;
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+
+    // 对每个 UV 坐标应用旋转矩阵（围绕 UV 中心 (0.5, 0.5) 旋转）
+    for (let i = 0; i < uvArray.length; i += 2) {
+        const u = uvArray[i] - 0.5;
+        const v = uvArray[i + 1] - 0.5;
+
+        uvArray[i] = u * cos - v * sin + 0.5;
+        uvArray[i + 1] = u * sin + v * cos + 0.5;
+    }
+
+    uvAttribute.needsUpdate = true;
+}
+
+/**
  * 加载 blockstate 并返回适用的几何体列表
  *
  * @param {string} blockType - 方块类型，如 'oak_fence'
  * @param {Object} blockProperties - 方块属性
  * @param {string} version - MC 版本
- * @returns {Promise<Array<{geometry, x, y}>>}
+ * @returns {Promise<Array<{geometry, x, y, uvlock}>>}
  */
 export async function loadBlockstateGeometries(blockType, blockProperties = {}, version = '1.20.1') {
     try {
@@ -234,7 +313,14 @@ export async function loadBlockstateGeometries(blockType, blockProperties = {}, 
 
                 // 应用旋转
                 if (x !== 0) geometry.rotateX((x * Math.PI) / 180);
-                if (y !== 0) geometry.rotateY((y * Math.PI) / 180);
+                if (y !== 0) {
+                    geometry.rotateY((y * Math.PI) / 180);
+
+                    // 如果启用 uvlock，应用 UV 锁定
+                    if (uvlock) {
+                        applyUVLock(geometry, y);
+                    }
+                }
 
                 return { geometry, x, y, uvlock };
             })

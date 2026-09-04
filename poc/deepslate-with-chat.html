@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Deepslate + AI Chat - 完整测试</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  gap: 0;
+}
+
+/* 左侧：Deepslate 渲染区 */
+.render-panel {
+  flex: 1;
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid #16213e;
+}
+
+.render-header {
+  background: #16213e;
+  padding: 20px;
+  border-bottom: 2px solid #0f3460;
+}
+
+.render-header h1 {
+  color: #eee;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: #4facfe;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #00c6ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(79, 172, 254, 0.3);
+}
+
+.btn-success {
+  background: #48bb78;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #38a169;
+}
+
+.canvas-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+#deepslate-canvas {
+  background: #87ceeb;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+#deepslate-canvas:active {
+  cursor: grabbing;
+}
+
+.stats {
+  background: #16213e;
+  padding: 15px 20px;
+  border-top: 2px solid #0f3460;
+  font-size: 13px;
+  color: #aaa;
+}
+
+/* 右侧：AI 对话区 */
+.chat-panel {
+  width: 400px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -5px 0 30px rgba(0, 0, 0, 0.2);
+}
+
+.chat-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.chat-header h2 {
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+.chat-header p {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f7fafc;
+}
+
+.message {
+  margin-bottom: 15px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  text-align: right;
+}
+
+.message-bubble {
+  display: inline-block;
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.message.user .message-bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant .message-bubble {
+  background: white;
+  color: #2d3748;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.message-time {
+  font-size: 11px;
+  color: #a0aec0;
+  margin-top: 5px;
+}
+
+.input-area {
+  padding: 20px;
+  background: white;
+  border-top: 1px solid #e2e8f0;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 10px;
+}
+
+#chat-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 24px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+#chat-input:focus {
+  border-color: #667eea;
+}
+
+#send-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+#send-btn:hover {
+  transform: scale(1.05);
+}
+
+#send-btn:active {
+  transform: scale(0.95);
+}
+
+.log {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.log-ok { color: #48bb78; }
+.log-err { color: #f56565; }
+.log-warn { color: #ed8936; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 左侧：Deepslate 渲染 -->
+  <div class="render-panel">
+    <div class="render-header">
+      <h1>🎮 Deepslate 原版渲染测试</h1>
+      <div class="controls">
+        <button class="btn btn-primary" onclick="init()">🚀 初始化</button>
+        <button class="btn btn-success" onclick="toggleAutoRotate()">🔄 自动旋转</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="deepslate-canvas" width="900" height="700"></canvas>
+    </div>
+
+    <div class="stats">
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- 右侧：AI 对话 -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <h2>💬 AI 助手</h2>
+      <p>询问关于 Minecraft 方块的任何问题</p>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="message assistant">
+        <div class="message-bubble">
+          你好！我是 Minecraft 方块专家 AI。你可以问我关于方块渲染、Deepslate 使用、或者任何 MC 相关的问题。
+        </div>
+        <div class="message-time">刚刚</div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="输入你的问题..."
+          onkeypress="if(event.key==='Enter') sendMessage()"
+        />
+        <button id="send-btn" onclick="sendMessage()">发送</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 依赖 -->
+<script src="https://unpkg.com/gl-matrix@3.4.3/gl-matrix-min.js"></script>
+<script src="/node_modules/deepslate/dist/deepslate.umd.js"></script>
+
+<script>
+// ============== Deepslate 渲染逻辑 ==============
+let canvas, gl, renderer, structure, resources;
+let cameraState = { distance: 15, rotX: 0.8, rotY: 0.5 };
+let mouse = { down: false, x: 0, y: 0 };
+let autoRotate = false;
+let animationId = null;
+
+const log = (msg, type = 'ok') => {
+  const div = document.getElementById('log');
+  const className = `log-${type}`;
+  div.innerHTML += `<div class="${className}">${msg}</div>`;
+  div.scrollTop = div.scrollHeight;
+};
+
+function toggleAutoRotate() {
+  autoRotate = !autoRotate;
+  if (autoRotate && !animationId) {
+    animate();
+  }
+}
+
+function animate() {
+  if (autoRotate) {
+    cameraState.rotY += 0.01;
+    renderFrame();
+    animationId = requestAnimationFrame(animate);
+  } else {
+    animationId = null;
+  }
+}
+
+function renderFrame() {
+  if (!renderer || !structure) return;
+
+  const { mat4 } = window.glMatrix;
+  const size = structure.getSize();
+
+  const view = mat4.create();
+  mat4.translate(view, view, [0, 0, -cameraState.distance]);
+  mat4.rotateX(view, view, cameraState.rotX);
+  mat4.rotateY(view, view, cameraState.rotY);
+  mat4.translate(view, view, [-size[0]/2, -size[1]/2, -size[2]/2]);
+
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(0.53, 0.81, 0.92, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+
+  renderer.drawStructure(view);
+}
+
+async function init() {
+  try {
+    log('🚀 初始化 Deepslate...', 'ok');
+
+    const D = window.deepslate;
+    const { mat4 } = window.glMatrix;
+
+    if (!D || !mat4) {
+      log('❌ 依赖未加载', 'err');
+      return;
+    }
+    log('✓ 依赖已加载', 'ok');
+
+    const BASE = '/public/mc-assets/1.20.1';
+
+    // 加载 blockstates
+    log('📦 加载 blockstates...', 'ok');
+    const blockDefinitions = {};
+    const blockstates = ['stone', 'oak_log', 'grass_block', 'oak_fence'];
+
+    for (const name of blockstates) {
+      try {
+        const resp = await fetch(`${BASE}/blockstates/${name}.json`);
+        if (resp.ok) {
+          const json = await resp.json();
+          blockDefinitions[`minecraft:${name}`] = D.BlockDefinition.fromJson(`minecraft:${name}`, json);
+        }
+      } catch (e) {
+        log(`  ⚠ ${name} 加载失败`, 'warn');
+      }
+    }
+    log(`✓ 加载了 ${Object.keys(blockDefinitions).length} 个 blockstate`, 'ok');
+
+    // 加载 models
+    log('🧱 加载 models...', 'ok');
+    const blockModels = {};
+    const modelPaths = [
+      'block/stone', 'block/oak_planks', 'block/cube_all', 'block/cube', 'block/block',
+      'block/oak_log', 'block/cube_column',
+      'block/grass_block', 'block/grass_block_snow',
+      'block/oak_fence_post', 'block/oak_fence_side',
+      'block/fence_post', 'block/fence_side', 'block/fence_inventory'
+    ];
+
+    for (const path of modelPaths) {
+      try {
+        const resp = await fetch(`${BASE}/models/${path}.json`);
+        if (resp.ok) {
+          const json = await resp.json();
+          blockModels[`minecraft:${path}`] = D.BlockModel.fromJson(json);
+        }
+      } catch (e) {
+        log(`  ⚠ ${path} 加载失败`, 'warn');
+      }
+    }
+    log(`✓ 加载了 ${Object.keys(blockModels).length} 个 model`, 'ok');
+
+    // Flatten models
+    log('🔗 解析模型继承...', 'ok');
+    for (const model of Object.values(blockModels)) {
+      model.flatten({
+        getBlockModel: (id) => blockModels[id.toString()] || null
+      });
+    }
+    log('✓ 继承链已解析', 'ok');
+
+    // 加载 atlas
+    log('🎨 加载 Atlas...', 'ok');
+    const atlasImg = new Image();
+    await new Promise((res, rej) => {
+      atlasImg.onload = res;
+      atlasImg.onerror = rej;
+      atlasImg.src = `${BASE}/atlas.png`;
+    });
+
+    const uvMapResp = await fetch(`${BASE}/atlas-uv-map.json`);
+    const uvMap = await uvMapResp.json();
+
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = 2048;
+    atlasCanvas.height = 2048;
+    const ctx = atlasCanvas.getContext('2d');
+    ctx.drawImage(atlasImg, 0, 0);
+    const imgData = ctx.getImageData(0, 0, 2048, 2048);
+
+    const idMap = {};
+    for (const [id, uv] of Object.entries(uvMap)) {
+      idMap[id] = uv;
+    }
+
+    const textureAtlas = new D.TextureAtlas(imgData, idMap);
+    log('✓ Atlas 已创建', 'ok');
+
+    // 创建 Resources
+    resources = {
+      getBlockDefinition: (id) => blockDefinitions[id.toString()] || null,
+      getBlockModel: (id) => blockModels[id.toString()] || null,
+      getTextureUV: (id) => textureAtlas.getTextureUV(id),
+      getTextureAtlas: () => textureAtlas.getTextureAtlas(),
+      getPixelSize: () => textureAtlas.getPixelSize(),
+      getBlockFlags: (id) => ({ opaque: true }),
+      getBlockProperties: (id) => ({}),
+      getDefaultBlockProperties: (id) => ({})
+    };
+    log('✓ Resources 对象已创建', 'ok');
+
+    // 构造 Structure
+    log('🧱 构造 Structure（4 方块）...', 'ok');
+    structure = new D.Structure([8, 3, 8]);
+
+    structure.addBlock([2, 0, 2], 'minecraft:stone', {});
+    structure.addBlock([5, 0, 2], 'minecraft:oak_log', { axis: 'y' });
+    structure.addBlock([2, 0, 5], 'minecraft:grass_block', {});
+    structure.addBlock([5, 0, 5], 'minecraft:oak_fence', {
+      east: 'false', west: 'false', north: 'false', south: 'false'
+    });
+    log('✓ Structure 已创建', 'ok');
+
+    // WebGL 初始化
+    canvas = document.getElementById('deepslate-canvas');
+    gl = canvas.getContext('webgl2', { antialias: true, alpha: false });
+    if (!gl) {
+      log('❌ WebGL2 不可用', 'err');
+      return;
+    }
+    log('✓ WebGL2 上下文就绪', 'ok');
+
+    // 创建 Renderer
+    log('🎨 创建 StructureRenderer...', 'ok');
+    renderer = new D.StructureRenderer(gl, structure, resources);
+    log('✓ StructureRenderer 已创建', 'ok');
+
+    // 首帧渲染
+    renderFrame();
+    log('✓ 首帧已渲染', 'ok');
+
+    // 鼠标交互
+    canvas.addEventListener('mousedown', e => {
+      mouse.down = true;
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      if (!mouse.down) return;
+      const dx = (e.clientX - mouse.x) * 0.005;
+      const dy = (e.clientY - mouse.y) * 0.005;
+      cameraState.rotY += dx;
+      cameraState.rotX += dy;
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      renderFrame();
+    });
+
+    canvas.addEventListener('mouseup', () => { mouse.down = false; });
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      cameraState.distance += e.deltaY * 0.01;
+      cameraState.distance = Math.max(5, Math.min(50, cameraState.distance));
+      renderFrame();
+    });
+
+    log('\n🎉 初始化完成！可以拖动旋转和滚轮缩放', 'ok');
+
+  } catch (e) {
+    log(`❌ 错误: ${e.message}`, 'err');
+    console.error(e);
+  }
+}
+
+// ============== AI 对话逻辑 ==============
+function addMessage(text, isUser = false) {
+  const messagesDiv = document.getElementById('messages');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+
+  const now = new Date();
+  const time = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+  messageDiv.innerHTML = `
+    <div class="message-bubble">${text}</div>
+    <div class="message-time">${time}</div>
+  `;
+
+  messagesDiv.appendChild(messageDiv);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+
+  if (!text) return;
+
+  // 添加用户消息
+  addMessage(text, true);
+  input.value = '';
+
+  // 模拟 AI 回复
+  setTimeout(() => {
+    let response = '';
+
+    if (text.includes('deepslate') || text.includes('Deepslate')) {
+      response = 'Deepslate 是一个用于渲染 Minecraft 原版方块的库。它支持完整的 blockstate、model 继承链和纹理 atlas。目前正在左侧渲染 4 个方块：Stone、Oak Log、Grass Block 和 Oak Fence。';
+    } else if (text.includes('方块') || text.includes('block')) {
+      response = '当前场景中有 4 种方块：<br>• Stone (石头) - 最基础的方块<br>• Oak Log (橡木原木) - 带纹理方向<br>• Grass Block (草方块) - 顶部有草<br>• Oak Fence (橡木栅栏) - Multipart 连接';
+    } else if (text.includes('如何') || text.includes('怎么')) {
+      response = '点击左上角的"🚀 初始化"按钮开始渲染。初始化完成后，你可以用鼠标拖动旋转视角，滚轮缩放。点击"🔄 自动旋转"可以让场景自动旋转。';
+    } else {
+      response = '我是 Minecraft 方块专家。你可以问我关于 Deepslate 渲染、方块类型、或者如何使用这个演示页面的问题。';
+    }
+
+    addMessage(response, false);
+  }, 500);
+}
+
+// 页面加载完成后自动初始化
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    init();
+  }, 500);
+});
+</script>
+
+</body>
+</html>

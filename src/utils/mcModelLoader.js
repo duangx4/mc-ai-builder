@@ -141,22 +141,130 @@ function getDefaultUV(faceName, from, to) {
 }
 
 /**
- * 解析 MC JSON 模型
+ * 解析纹理变量引用
+ * 例如：#texture, #particle, #0, #1 等
+ *
+ * @param {Object} textures - 纹理映射表
+ * @returns {Object} 解析后的纹理映射
+ */
+function resolveTextureVariables(textures) {
+    const resolved = {};
+    const maxIterations = 10; // 防止循环引用
+
+    // 首先复制所有纹理
+    Object.assign(resolved, textures);
+
+    // 递归解析纹理变量引用
+    for (let i = 0; i < maxIterations; i++) {
+        let changed = false;
+
+        Object.keys(resolved).forEach(key => {
+            const value = resolved[key];
+
+            // 如果值是变量引用（以 # 开头）
+            if (typeof value === 'string' && value.startsWith('#')) {
+                const refKey = value.substring(1); // 移除 #
+                if (resolved[refKey] && resolved[refKey] !== value) {
+                    resolved[key] = resolved[refKey];
+                    changed = true;
+                }
+            }
+        });
+
+        if (!changed) break; // 没有变化，说明已完全解析
+    }
+
+    return resolved;
+}
+
+/**
+ * 合并父模型和子模型
+ * 子模型的属性会覆盖父模型的同名属性
+ *
+ * @param {Object} parent - 父模型 JSON
+ * @param {Object} child - 子模型 JSON
+ * @returns {Object} 合并后的模型
+ */
+function mergeModels(parent, child) {
+    const merged = {
+        ...parent,
+        ...child
+    };
+
+    // 纹理需要合并，不是简单覆盖
+    if (parent.textures || child.textures) {
+        merged.textures = {
+            ...(parent.textures || {}),
+            ...(child.textures || {})
+        };
+    }
+
+    // elements 优先使用子模型，如果子模型没有则使用父模型
+    if (!child.elements && parent.elements) {
+        merged.elements = parent.elements;
+    }
+
+    // display 需要合并每个视角的配置
+    if (parent.display || child.display) {
+        merged.display = {
+            ...(parent.display || {}),
+            ...(child.display || {})
+        };
+    }
+
+    return merged;
+}
+
+/**
+ * 解析 MC JSON 模型（支持父模型继承）
  *
  * @param {Object} modelJson - MC 模型 JSON 对象
  * @param {Object} textures - 纹理映射 {particle, texture, ...}
- * @returns {THREE.BufferGeometry} 合并后的几何体
+ * @param {string} version - MC 版本
+ * @param {Set} loadedParents - 已加载的父模型路径（防止循环引用）
+ * @returns {Promise<THREE.BufferGeometry>} 合并后的几何体
  */
-export function parseModelJson(modelJson, textures = {}) {
-    const { elements = [], parent } = modelJson;
+export async function parseModelJson(modelJson, textures = {}, version = '1.20.1', loadedParents = new Set()) {
+    let finalModel = modelJson;
+    let finalTextures = { ...textures, ...(modelJson.textures || {}) };
 
-    // TODO: 处理父模型继承（如果有 parent 字段）
+    // 处理父模型继承
+    if (modelJson.parent) {
+        const parentPath = modelJson.parent.replace(/^minecraft:/, '');
 
+        // 防止循环引用
+        if (!loadedParents.has(parentPath)) {
+            loadedParents.add(parentPath);
+
+            try {
+                const parentModel = await loadModelJson(parentPath, version);
+
+                // 递归解析父模型的父模型
+                const parentGeometry = await parseModelJson(
+                    parentModel,
+                    finalTextures,
+                    version,
+                    loadedParents
+                );
+
+                // 合并父模型和当前模型
+                finalModel = mergeModels(parentModel, modelJson);
+                finalTextures = { ...finalTextures, ...(finalModel.textures || {}) };
+            } catch (err) {
+                console.warn('[MCModelLoader] Failed to load parent model:', modelJson.parent, err);
+            }
+        }
+    }
+
+    // 解析纹理变量引用
+    const resolvedTextures = resolveTextureVariables(finalTextures);
+
+    const { elements = [] } = finalModel;
     const geometries = [];
 
     elements.forEach(element => {
         try {
-            const geo = createElementGeometry(element, textures);
+            const geo = createElementGeometry(element, resolvedTextures);
             geometries.push(geo);
         } catch (err) {
             console.warn('[MCModelLoader] Failed to parse element:', element, err);
@@ -225,6 +333,25 @@ function mergeGeometries(geometries) {
 }
 
 /**
+ * 从文件路径加载 MC 模型 JSON（不解析几何体）
+ *
+ * @param {string} modelPath - 模型路径，如 'block/fence_post'
+ * @param {string} version - MC 版本，默认 '1.20.1'
+ * @returns {Promise<Object>} 模型 JSON 对象
+ */
+async function loadModelJson(modelPath, version = '1.20.1') {
+    // 构建完整路径
+    const fullPath = `/minecraft-${version}/models/${modelPath}.json`;
+
+    const response = await fetch(fullPath);
+    if (!response.ok) {
+        throw new Error(`Failed to load model: ${fullPath}`);
+    }
+
+    return await response.json();
+}
+
+/**
  * 从文件路径加载 MC 模型
  *
  * @param {string} modelPath - 模型路径，如 'block/fence_post'
@@ -233,21 +360,13 @@ function mergeGeometries(geometries) {
  */
 export async function loadModel(modelPath, version = '1.20.1') {
     try {
-        // 构建完整路径
-        const fullPath = `/minecraft-${version}/models/${modelPath}.json`;
-
-        const response = await fetch(fullPath);
-        if (!response.ok) {
-            throw new Error(`Failed to load model: ${fullPath}`);
-        }
-
-        const modelJson = await response.json();
+        const modelJson = await loadModelJson(modelPath, version);
 
         // 解析纹理引用
         const textures = modelJson.textures || {};
 
-        // 解析模型
-        const geometry = parseModelJson(modelJson, textures);
+        // 解析模型（支持父模型继承）
+        const geometry = await parseModelJson(modelJson, textures, version);
 
         return geometry;
     } catch (err) {

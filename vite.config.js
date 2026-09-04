@@ -9,5 +9,19 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     emptyOutDir: true
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/tests/setup.js',
+    // 排除第三方 vendored 目录的测试
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/web-client/**',
+      '**/render-server/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*'
+    ],
   }
 })
