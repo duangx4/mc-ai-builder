@@ -173,7 +173,7 @@ export class RegionSelector {
     this.selectionBox.position.set(
       (minX + maxX) / 2,
       (minY + maxY) / 2,
-      (minZ + minZ) / 2
+      (minZ + maxZ) / 2
     );
     this.scene.add(this.selectionBox);
 

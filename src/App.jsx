@@ -30,7 +30,8 @@ import { MousePointer2, Plane } from 'lucide-react';
 import PromptOptimizer from './components/PromptOptimizer';
 import ModeSelector from './components/ModeSelector';
 import RegionSelectionUI from './components/RegionSelectionUI';
-import { RegionSelector, extractBlocksInRegion } from './utils/RegionSelector';
+import RegionSelectorHandler from './components/RegionSelectorHandler';
+import { extractBlocksInRegion } from './utils/RegionSelector';
 
 /**
  * @typedef {Object} Variant
@@ -3626,6 +3627,24 @@ ${finalCode}
           <CameraDebugHelper />
 
           <VoxelWorld version={selectedVersion} />
+
+          {/* 区域选择处理器 */}
+          <RegionSelectorHandler
+            isActive={isRegionSelecting}
+            onBoundsChange={(bounds) => {
+              setRegionBounds(bounds);
+            }}
+            onSelectionEnd={(bounds) => {
+              setRegionBounds(bounds);
+              // 提取选中区域的方块
+              const blocksInRegion = extractBlocksInRegion(blocks, bounds);
+              setSelectedRegionBlocks(blocksInRegion);
+              console.log('[RegionSelection] Selection ended:', {
+                bounds,
+                blockCount: blocksInRegion.length
+              });
+            }}
+          />
         </Canvas>
 
         {/* Loading Overlay for Session Switching */}
