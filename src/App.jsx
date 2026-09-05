@@ -662,8 +662,33 @@ function App() {
       // 精确修改模式：合并区域外的保留方块
       if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
         console.log('[Precise Mode] Merging', preservedBlocksRef.current.length, 'preserved blocks with', generatedBlocks.length, 'generated blocks');
-        generatedBlocks = [...preservedBlocksRef.current, ...generatedBlocks];
+
+        // 创建位置映射以去除重复（生成的方块优先）
+        const positionMap = new Map();
+
+        // 先添加生成的方块（优先级更高）
+        generatedBlocks.forEach(block => {
+          const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+          positionMap.set(key, block);
+        });
+
+        // 再添加保留的方块（只添加不冲突的位置）
+        preservedBlocksRef.current.forEach(block => {
+          const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+          if (!positionMap.has(key)) {
+            positionMap.set(key, block);
+          }
+        });
+
+        // 转换回数组，重新分配唯一 ID
+        const timestamp = Date.now();
+        generatedBlocks = Array.from(positionMap.values()).map((block, i) => ({
+          ...block,
+          id: `${timestamp}-${i}`
+        }));
         generatedCount = generatedBlocks.length;
+
+        console.log('[Precise Mode] Final blocks:', generatedCount, '(deduplicated)');
       }
 
       let contentWithCodeBlock;
@@ -1119,7 +1144,32 @@ function App() {
       let finalBlocks = newBlocks;
       if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
         console.log('[Precise Mode - Smart] Merging', preservedBlocksRef.current.length, 'preserved blocks with', newBlocks.length, 'generated blocks');
-        finalBlocks = [...preservedBlocksRef.current, ...newBlocks];
+
+        // 创建位置映射以去除重复（生成的方块优先）
+        const positionMap = new Map();
+
+        // 先添加生成的方块（优先级更高）
+        newBlocks.forEach(block => {
+          const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+          positionMap.set(key, block);
+        });
+
+        // 再添加保留的方块（只添加不冲突的位置）
+        preservedBlocksRef.current.forEach(block => {
+          const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+          if (!positionMap.has(key)) {
+            positionMap.set(key, block);
+          }
+        });
+
+        // 转换回数组，重新分配唯一 ID
+        const timestamp = Date.now();
+        finalBlocks = Array.from(positionMap.values()).map((block, i) => ({
+          ...block,
+          id: `${timestamp}-${i}`
+        }));
+
+        console.log('[Precise Mode - Smart] Final blocks:', finalBlocks.length, '(deduplicated)');
       }
 
       // 更新变体
