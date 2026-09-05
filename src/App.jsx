@@ -29,6 +29,8 @@ import MinecraftHUD from './components/MinecraftHUD';
 import { MousePointer2, Plane } from 'lucide-react';
 import PromptOptimizer from './components/PromptOptimizer';
 import ModeSelector from './components/ModeSelector';
+import RegionSelectionUI from './components/RegionSelectionUI';
+import { RegionSelector, extractBlocksInRegion } from './utils/RegionSelector';
 
 /**
  * @typedef {Object} Variant
@@ -318,6 +320,11 @@ function App() {
   const [attachedImages, setAttachedImages] = useState([]); // User uploaded images for Vision API (max 3)
   const [viewingImage, setViewingImage] = useState(null); // Image URL for fullscreen viewer
   const [isProjectionOpen, setIsProjectionOpen] = useState(false); // Projection viewer modal
+  // Region selection states
+  const [isRegionSelecting, setIsRegionSelecting] = useState(false);
+  const [regionBounds, setRegionBounds] = useState(null);
+  const [selectedRegionBlocks, setSelectedRegionBlocks] = useState([]);
+  const regionSelectorRef = useRef(null);
   // Note: apiConversationHistory is now managed by useStore for persistence
   const controlsRef = useRef();
 
@@ -1174,6 +1181,67 @@ function App() {
     } catch (error) {
       console.error('[VariantSwitch] Failed to extract code:', error);
     }
+  };
+
+  /**
+   * 开始区域选择（精确修改模式）
+   */
+  const handleStartRegionSelection = () => {
+    setIsRegionSelecting(true);
+    setRegionBounds(null);
+    setSelectedRegionBlocks([]);
+    console.log('[RegionSelection] Started');
+  };
+
+  /**
+   * 确认区域选择
+   */
+  const handleConfirmRegionSelection = () => {
+    if (!regionBounds) return;
+
+    // 提取选中区域的方块
+    const blocksInRegion = extractBlocksInRegion(blocks, regionBounds);
+    setSelectedRegionBlocks(blocksInRegion);
+
+    console.log('[RegionSelection] Confirmed:', {
+      bounds: regionBounds,
+      blockCount: blocksInRegion.length
+    });
+
+    // 提示用户输入修改需求
+    showToast(`已选择 ${blocksInRegion.length} 个方块，请输入修改需求`, 'success');
+
+    // 保持选择状态，等待用户输入
+    setIsRegionSelecting(false);
+  };
+
+  /**
+   * 取消区域选择
+   */
+  const handleCancelRegionSelection = () => {
+    setIsRegionSelecting(false);
+    setRegionBounds(null);
+    setSelectedRegionBlocks([]);
+
+    if (regionSelectorRef.current) {
+      regionSelectorRef.current.clearSelection();
+    }
+
+    console.log('[RegionSelection] Cancelled');
+  };
+
+  /**
+   * 重新选择区域
+   */
+  const handleResetRegionSelection = () => {
+    setRegionBounds(null);
+    setSelectedRegionBlocks([]);
+
+    if (regionSelectorRef.current) {
+      regionSelectorRef.current.clearSelection();
+    }
+
+    handleStartRegionSelection();
   };
 
   const handleSend = async (overridePrompt = null, imageUrl = null) => {
@@ -2302,6 +2370,17 @@ ${finalCode}
         disabled={isLoadingSession}
       />
 
+      {/* Region Selection UI */}
+      <RegionSelectionUI
+        isSelecting={isRegionSelecting}
+        bounds={regionBounds}
+        blockCount={selectedRegionBlocks.length}
+        onConfirm={handleConfirmRegionSelection}
+        onCancel={handleCancelRegionSelection}
+        onReset={handleResetRegionSelection}
+        language={language}
+      />
+
       {/* Version Selection Modal - 合并了版本选择和文件名输入 */}
       <VersionSelectModal
         isOpen={isVersionSelectOpen}
@@ -3246,6 +3325,17 @@ ${finalCode}
               onModeChange={(mode) => {
                 setGenerationMode(mode);
                 console.log('[App] Mode changed to:', mode);
+
+                // 切换到精确修改模式时，自动启动区域选择
+                if (mode === 'precise' && blocks.length > 0) {
+                  handleStartRegionSelection();
+                  showToast('请在 3D 场景中拖动框选区域', 'info');
+                } else if (mode !== 'precise') {
+                  // 切换到其他模式时，取消区域选择
+                  if (isRegionSelecting || regionBounds) {
+                    handleCancelRegionSelection();
+                  }
+                }
               }}
               language={language}
             />
