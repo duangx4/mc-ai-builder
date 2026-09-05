@@ -1,7 +1,7 @@
 {
   "name": "mc-ai-builder",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.0.0",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",

@@ -97,7 +97,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/mc-ai-builder-v2.git
+git clone https://github.com/duangx4/mc-ai-builder-v2.git
 cd mc-ai-builder-v2
 
 # 安装依赖
@@ -682,9 +682,9 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 ## 📞 联系方式
 
-- **问题反馈**：[GitHub Issues](https://github.com/yourusername/mc-ai-builder-v2/issues)
-- **功能建议**：[GitHub Discussions](https://github.com/yourusername/mc-ai-builder-v2/discussions)
-- **邮箱**：your.email@example.com
+- **问题反馈**：[GitHub Issues](https://github.com/duangx4/mc-ai-builder-v2/issues)
+- **功能建议**：[GitHub Discussions](https://github.com/duangx4/mc-ai-builder-v2/discussions)
+- **邮箱**：yandangjun@outlook.com
 
 ---
 
