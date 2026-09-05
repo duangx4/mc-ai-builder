@@ -1,74 +1,131 @@
-# MC AI Builder
+# MC AI Builder v2
 
-AI 驱动的 Minecraft 建筑生成器，用自然语言描述你想要的建筑，AI 帮你实现。
-（说个搞笑的，这个工具也是ai做的）
-## ✨ 功能特点
+基于 AI 的 Minecraft 建筑生成器，支持智能建造、蓝图规划和精确修改。
 
-- 🗣️ **自然语言生成** - 中英文描述都支持，说"日式神社"就能生成
-- 🎨 **实时 3D 预览** - 边生成边看，所见即所得
-- 🔄 **并发生成** - 同时生成多个方案，选最喜欢的
-- 🖼️ **视觉模式** - 上传参考图，AI 照着建
-- 📦 **多格式导出** - WorldEdit、Litematica、Axiom、数据包、单指令
-- 🎮 **全版本支持** - MC 1.8 到 1.21+ 自动转换方块名
+## 快速开始
 
-## 🚀 快速开始
-
-### 下载使用（推荐）
-
-1. 解压后双击 `启动.bat`
-2. 浏览器自动打开 `http://localhost:3001`
-3. 在设置中填入你的 AI API Key
-4. 开始创作！
-
-### 从源码运行
-
+### 安装
 ```bash
-# 克隆仓库
-git clone https://github.com/你的用户名/mc-ai-builder.git
-cd mc-ai-builder
-
-# 安装依赖
 npm install
-
-# 启动开发服务器
 npm run dev
-
-# 另开一个终端，启动后端
-node server.js
 ```
 
-## 🔑 支持的 AI API
+### 配置
+1. 打开应用后点击右上角 ⚙️ 设置
+2. 填写 OpenAI API Key
+3. 选择模型（推荐 gpt-4）
 
-- OpenAI (GPT-4, GPT-4o)
-- 其他兼容 OpenAI 格式的 API
+## 三种生成模式
 
-## 📖 使用说明
+### ⚡ 快速生成
+适合快速创建和修改建筑
+```
+建造一个中世纪风格的石制塔楼，15x15，高度25格
+```
 
-### 快速模式（推荐）
+### 📐 蓝图模式
+适合大型建筑的详细规划
+- 5个问题收集需求
+- SVG 平面图可视化
+- 施工计划和材料清单
+- 审批后建造
 
-默认就是快速模式，质量最好、速度最快，直接用就行。
+### 🎯 精确修改
+适合建筑群的局部修改
+- 框选要修改的区域
+- 智能分析周边风格
+- 只修改选中部分
+- 其他建筑完全保留
 
-### 高级模式
+## 文档
 
-在全局设置里可以切换到"自定义模式"或"自主模式"，适合想深入研究的玩家。
+- 📖 [用户手册](./docs/USER_MANUAL.md) - 详细使用指南
+- 🛠️ [开发文档](./docs/DEV_GUIDE.md) - 技术文档和 API 参考
 
-### 导出格式
+## 项目结构
 
-| 格式 | 用途 |
-|------|------|
-| WorldEdit (.schem) |
-| Litematica (.litematic) |
-| Axiom (.bp) |
-| 数据包 |
-| 单指令 |
+```
+src/
+├── components/          # React 组件
+│   ├── VoxelWorld.jsx           # 3D 渲染
+│   ├── ChatInterface.jsx        # 对话界面
+│   ├── BlueprintViewer.jsx      # 蓝图审批
+│   └── PreciseModificationPlanViewer.jsx  # 精确修改审批
+│
+├── utils/              # 核心工具
+│   ├── ai.js                    # AI API 调用
+│   ├── sandbox.js               # 代码执行沙箱
+│   ├── blueprintEngine.js       # 蓝图模式引擎
+│   ├── preciseModificationEngine.js  # 精确修改引擎
+│   ├── errorHandling.js         # 统一错误处理
+│   └── performanceOptimizations.js   # 性能优化
+│
+└── store/              # 状态管理
+    └── useStore.js              # Zustand store
+```
 
-## 📜 开源协议
+## 核心功能
 
-本项目采用 [GPL-3.0](LICENSE) 协议开源。
+- ✅ 三种生成模式（快速/蓝图/精确）
+- ✅ 并发生成多个方案
+- ✅ Agent 深度推理模式
+- ✅ SVG 平面图可视化
+- ✅ 区域框选和精确修改
+- ✅ 智能降级（AI 失败 → 本地生成）
+- ✅ 统一错误处理
+- ✅ 3D 实时预览
 
-你可以自由使用、修改、分发本软件，但需要：
-- 保留原作者信息
-- 修改后的代码也必须开源
-- 使用相同的 GPL-3.0 协议
+## 技术栈
 
-如果这个项目对你有帮助，欢迎 Star ⭐
+- **前端**: React 18 + Vite
+- **3D 渲染**: Three.js + React Three Fiber
+- **状态管理**: Zustand
+- **样式**: Tailwind CSS
+- **AI**: OpenAI API
+
+## 开发
+
+```bash
+# 开发模式
+npm run dev
+
+# 构建
+npm run build
+
+# 预览构建
+npm run preview
+```
+
+## 最近更新
+
+### P1 阶段完成 ✅
+- ✅ P1.1: 快速生成模式
+- ✅ P1.2: 并发生成和 Agent 模式
+- ✅ P1.3: 精确修改模式基础
+- ✅ P1.4: 区域框选工具
+- ✅ P1.5: 蓝图模式工作流
+- ✅ P1.6: 精确修改工作流增强
+- ✅ P1.7: 集成测试和优化
+
+### 提交记录
+```
+b378e7bb - feat(P1.7): 统一错误处理和 API 响应解析
+f7d8d6a6 - feat(P1.7): 添加状态管理和性能优化工具
+d0f0fdc3 - feat(P1.6): 实现精确修改模式工作流
+75dd8e28 - fix(P1.5): 修复蓝图模式的多个问题
+f9c53123 - feat(P1.5): 实现蓝图模式完整工作流
+```
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 许可
+
+MIT License
+
+---
+
+**版本**: v2.0  
+**作者**: MC AI Builder Team  
+**更新**: 2024
