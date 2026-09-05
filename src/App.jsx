@@ -32,6 +32,9 @@ import ModeSelector from './components/ModeSelector';
 import RegionSelectionUI from './components/RegionSelectionUI';
 import GizmoRegionSelector from './components/GizmoRegionSelector';
 import { extractBlocksInRegion } from './utils/RegionSelector';
+import BlueprintQuestionnaire from './components/BlueprintQuestionnaire';
+import BlueprintViewer from './components/BlueprintViewer';
+import { executeBlueprintWorkflow, BLUEPRINT_PHASES } from './utils/blueprintEngine';
 
 /**
  * @typedef {Object} Variant
@@ -327,6 +330,11 @@ function App() {
   const [selectedRegionBlocks, setSelectedRegionBlocks] = useState([]);
   const [regionControlMode, setRegionControlMode] = useState('translate'); // 'translate' or 'scale'
   const regionSelectorRef = useRef(null);
+  // Blueprint mode states
+  const [isBlueprintQuestionnaireOpen, setIsBlueprintQuestionnaireOpen] = useState(false);
+  const [isBlueprintViewerOpen, setIsBlueprintViewerOpen] = useState(false);
+  const [blueprintData, setBlueprintData] = useState(null);
+  const [blueprintRequirements, setBlueprintRequirements] = useState(null);
   // Note: apiConversationHistory is now managed by useStore for persistence
   const controlsRef = useRef();
 
@@ -535,6 +543,94 @@ function App() {
     // It does NOT immediately change the current mode
 
     setIsSettingsOpen(false);
+  };
+
+  // Blueprint mode handlers
+  const handleBlueprintQuestionnaireComplete = async (requirements) => {
+    setIsBlueprintQuestionnaireOpen(false);
+    setBlueprintRequirements(requirements);
+    setIsProcessing(true);
+
+    try {
+      // 生成蓝图
+      showToast('正在生成蓝图...', 'info');
+
+      const { generateBlueprintWithAI } = await import('./utils/blueprintEngine');
+      const blueprint = await generateBlueprintWithAI(requirements, apiSettings);
+
+      setBlueprintData(blueprint);
+      setIsBlueprintViewerOpen(true);
+      showToast('蓝图生成完成', 'success');
+    } catch (error) {
+      console.error('蓝图生成失败:', error);
+      showToast(`蓝图生成失败: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBlueprintApprove = async () => {
+    setIsBlueprintViewerOpen(false);
+    setIsProcessing(true);
+
+    try {
+      showToast('开始建造...', 'info');
+
+      const { generateBuildCodeFromBlueprint } = await import('./utils/blueprintEngine');
+      const result = await generateBuildCodeFromBlueprint(
+        blueprintData,
+        apiSettings,
+        ({ phase, message, progress }) => {
+          console.log(`[Blueprint Build] ${phase}: ${message} (${progress}%)`);
+        }
+      );
+
+      // 执行生成的代码
+      const { executeVoxelCode } = await import('./utils/sandbox');
+      const buildResult = executeVoxelCode(result.code);
+
+      if (buildResult.success) {
+        useStore.getState().setBlocks(buildResult.blocks);
+        useStore.getState().setSemanticVoxels(buildResult.semanticVoxels || []);
+
+        // 添加到对话历史
+        setMessages(prev => [
+          ...prev,
+          { role: 'user', content: `建造 ${blueprintData.metadata.buildingType}（${blueprintData.metadata.style} 风格）` },
+          {
+            role: 'ai',
+            content: `已完成建造！\n\n**建筑信息**：\n- 类型: ${blueprintData.metadata.buildingType}\n- 风格: ${blueprintData.metadata.style}\n- 尺寸: ${blueprintData.metadata.size.width}×${blueprintData.metadata.size.depth}×${blueprintData.metadata.size.height}\n- 方块数: ${buildResult.blocks.length}`,
+            hasScript: true,
+            generationMode: 'workflow'
+          }
+        ]);
+
+        showToast('建造完成！', 'success');
+      } else {
+        throw new Error(buildResult.error || '代码执行失败');
+      }
+    } catch (error) {
+      console.error('建造失败:', error);
+      showToast(`建造失败: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+      setBlueprintData(null);
+      setBlueprintRequirements(null);
+    }
+  };
+
+  const handleBlueprintModify = () => {
+    setIsBlueprintViewerOpen(false);
+    setIsBlueprintQuestionnaireOpen(true);
+  };
+
+  const handleBlueprintCancel = () => {
+    setIsBlueprintViewerOpen(false);
+    setIsBlueprintQuestionnaireOpen(false);
+    setBlueprintData(null);
+    setBlueprintRequirements(null);
+    setIsProcessing(false);
+    showToast('已取消蓝图模式', 'info');
   };
 
   // Handle stop generation
@@ -1339,6 +1435,13 @@ function App() {
     // 精确修改模式：检查是否已选择区域
     if (generationMode === 'precise' && (!regionBounds || selectedRegionBlocks.length === 0)) {
       showToast('请先框选要修改的区域', 'error');
+      return;
+    }
+
+    // 蓝图模式：启动问答流程
+    if (generationMode === 'workflow') {
+      setIsBlueprintQuestionnaireOpen(true);
+      setIsProcessing(false);
       return;
     }
 
@@ -2593,6 +2696,23 @@ ${finalCode}
         onReset={handleResetRegionSelection}
         language={language}
       />
+
+      {/* Blueprint Mode Components */}
+      {isBlueprintQuestionnaireOpen && (
+        <BlueprintQuestionnaire
+          onComplete={handleBlueprintQuestionnaireComplete}
+          onCancel={handleBlueprintCancel}
+        />
+      )}
+
+      {isBlueprintViewerOpen && blueprintData && (
+        <BlueprintViewer
+          blueprint={blueprintData}
+          onApprove={handleBlueprintApprove}
+          onModify={handleBlueprintModify}
+          onCancel={handleBlueprintCancel}
+        />
+      )}
 
       {/* Version Selection Modal - 合并了版本选择和文件名输入 */}
       <VersionSelectModal
