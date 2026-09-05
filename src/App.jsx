@@ -662,6 +662,8 @@ function App() {
       // 精确修改模式：合并区域外的保留方块
       if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
         console.log('[Precise Mode] Merging', preservedBlocksRef.current.length, 'preserved blocks with', generatedBlocks.length, 'generated blocks');
+        console.log('[Precise Mode] DEBUG - preservedBlocksRef sample:', preservedBlocksRef.current.slice(0, 3));
+        console.log('[Precise Mode] DEBUG - generatedBlocks sample:', generatedBlocks.slice(0, 3));
 
         // 创建位置映射以去除重复（生成的方块优先）
         const positionMap = new Map();
@@ -689,6 +691,12 @@ function App() {
         generatedCount = generatedBlocks.length;
 
         console.log('[Precise Mode] Final blocks:', generatedCount, '(deduplicated)');
+        console.log('[Precise Mode] DEBUG - Final blocks sample:', generatedBlocks.slice(0, 5));
+      } else {
+        console.log('[Precise Mode] DEBUG - No preserved blocks to merge!', {
+          hasRef: !!preservedBlocksRef.current,
+          refLength: preservedBlocksRef.current?.length || 0
+        });
       }
 
       let contentWithCodeBlock;
