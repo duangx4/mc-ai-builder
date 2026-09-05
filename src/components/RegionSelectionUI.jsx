@@ -33,7 +33,7 @@ const RegionSelectionUI = ({
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-yellow-400 mb-2">
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-            {t('Selecting... Drag to adjust region', '选择中... 拖动调整区域')}
+            {t('Selecting... Click twice to set region', '选择中... 单击两次设置区域')}
           </div>
         </div>
       ) : null}
@@ -139,8 +139,9 @@ const RegionSelectionUI = ({
       {isSelecting && (
         <div className="mt-4 pt-4 border-t border-white/10">
           <div className="text-xs text-neutral-400 space-y-1">
-            <div>💡 {t('Click and drag to select region', '点击拖动选择区域')}</div>
-            <div>🎯 {t('Release to finish selection', '松开完成选择')}</div>
+            <div>💡 {t('Click once to set start point', '单击一次设置起点')}</div>
+            <div>🎯 {t('Click again to set end point', '再次单击设置终点')}</div>
+            <div>🟡 {t('Yellow box shows preview', '黄色框显示预览')}</div>
           </div>
         </div>
       )}

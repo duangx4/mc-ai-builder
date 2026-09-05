@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 
 /**
- * 区域选择工具
+ * 区域选择工具（两次单击模式）
  * 用于在 3D 场景中框选特定区域（精确修改模式）
+ * 交互方式：第一次点击设置起点，第二次点击设置终点
  */
 export class RegionSelector {
   constructor(scene, camera, canvas) {
@@ -10,9 +11,10 @@ export class RegionSelector {
     this.camera = camera;
     this.canvas = canvas;
 
-    this.isSelecting = false;
+    this.clickCount = 0; // 0: 未开始, 1: 已设置起点, 2: 已完成
     this.startPoint = null;
     this.endPoint = null;
+    this.currentHoverPoint = null;
 
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
@@ -20,6 +22,10 @@ export class RegionSelector {
     // 选中区域的边界框
     this.selectionBox = null;
     this.boxHelper = null;
+
+    // 预览框（第一次点击后，跟随鼠标）
+    this.previewBox = null;
+    this.previewHelper = null;
 
     // 回调函数
     this.onSelectionStart = null;
@@ -31,74 +37,72 @@ export class RegionSelector {
    * 启用区域选择
    */
   enable() {
-    this.canvas.addEventListener('mousedown', this.handleMouseDown);
+    this.canvas.addEventListener('click', this.handleClick);
     this.canvas.addEventListener('mousemove', this.handleMouseMove);
-    this.canvas.addEventListener('mouseup', this.handleMouseUp);
     this.canvas.style.cursor = 'crosshair';
+    console.log('[RegionSelector] Enabled (two-click mode)');
   }
 
   /**
    * 禁用区域选择
    */
   disable() {
-    this.canvas.removeEventListener('mousedown', this.handleMouseDown);
+    this.canvas.removeEventListener('click', this.handleClick);
     this.canvas.removeEventListener('mousemove', this.handleMouseMove);
-    this.canvas.removeEventListener('mouseup', this.handleMouseUp);
     this.canvas.style.cursor = 'default';
     this.clearSelection();
+    this.clearPreview();
+    console.log('[RegionSelector] Disabled');
   }
 
   /**
-   * 鼠标按下 - 开始选择
+   * 点击事件处理
    */
-  handleMouseDown = (event) => {
+  handleClick = (event) => {
     const point = this.getWorldPoint(event);
     if (!point) return;
 
-    this.isSelecting = true;
-    this.startPoint = point;
-    this.endPoint = point.clone();
+    if (this.clickCount === 0) {
+      // 第一次点击：设置起点
+      this.startPoint = point;
+      this.clickCount = 1;
 
-    if (this.onSelectionStart) {
-      this.onSelectionStart(this.startPoint);
+      if (this.onSelectionStart) {
+        this.onSelectionStart(this.startPoint);
+      }
+
+      console.log('[RegionSelector] First click:', this.startPoint);
+    } else if (this.clickCount === 1) {
+      // 第二次点击：设置终点，完成选择
+      this.endPoint = point;
+      this.clickCount = 2;
+
+      this.clearPreview();
+      this.updateSelectionBox();
+
+      if (this.onSelectionEnd) {
+        this.onSelectionEnd(this.getSelectionBounds());
+      }
+
+      console.log('[RegionSelector] Second click:', this.endPoint);
+      console.log('[RegionSelector] Selection completed');
     }
-
-    this.updateSelectionBox();
   }
 
   /**
-   * 鼠标移动 - 更新选择区域
+   * 鼠标移动 - 更新预览框
    */
   handleMouseMove = (event) => {
-    if (!this.isSelecting) return;
+    if (this.clickCount !== 1) return; // 只在第一次点击后才显示预览
 
     const point = this.getWorldPoint(event);
     if (!point) return;
 
-    this.endPoint = point;
-    this.updateSelectionBox();
+    this.currentHoverPoint = point;
+    this.updatePreviewBox();
 
     if (this.onSelectionChange) {
-      this.onSelectionChange(this.getSelectionBounds());
-    }
-  }
-
-  /**
-   * 鼠标释放 - 完成选择
-   */
-  handleMouseUp = (event) => {
-    if (!this.isSelecting) return;
-
-    const point = this.getWorldPoint(event);
-    if (point) {
-      this.endPoint = point;
-      this.updateSelectionBox();
-    }
-
-    this.isSelecting = false;
-
-    if (this.onSelectionEnd) {
-      this.onSelectionEnd(this.getSelectionBounds());
+      this.onSelectionChange(this.getPreviewBounds());
     }
   }
 
@@ -130,7 +134,59 @@ export class RegionSelector {
   }
 
   /**
-   * 更新选择框的可视化
+   * 更新预览框（第一次点击后，跟随鼠标）
+   */
+  updatePreviewBox() {
+    if (!this.startPoint || !this.currentHoverPoint) return;
+
+    // 清除旧的预览框
+    if (this.previewBox) {
+      this.scene.remove(this.previewBox);
+      this.previewBox.geometry.dispose();
+      this.previewBox.material.dispose();
+    }
+    if (this.previewHelper) {
+      this.scene.remove(this.previewHelper);
+      this.previewHelper.geometry.dispose();
+      this.previewHelper.material.dispose();
+    }
+
+    // 计算边界框
+    const minX = Math.min(this.startPoint.x, this.currentHoverPoint.x);
+    const maxX = Math.max(this.startPoint.x, this.currentHoverPoint.x);
+    const minY = Math.min(this.startPoint.y, this.currentHoverPoint.y);
+    const maxY = Math.max(this.startPoint.y, this.currentHoverPoint.y);
+    const minZ = Math.min(this.startPoint.z, this.currentHoverPoint.z);
+    const maxZ = Math.max(this.startPoint.z, this.currentHoverPoint.z);
+
+    // 创建预览框几何体（黄色半透明）
+    const geometry = new THREE.BoxGeometry(
+      maxX - minX + 1,
+      maxY - minY + 1,
+      maxZ - minZ + 1
+    );
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xffff00,
+      transparent: true,
+      opacity: 0.15,
+      depthWrite: false
+    });
+
+    this.previewBox = new THREE.Mesh(geometry, material);
+    this.previewBox.position.set(
+      (minX + maxX) / 2,
+      (minY + maxY) / 2,
+      (minZ + maxZ) / 2
+    );
+    this.scene.add(this.previewBox);
+
+    // 创建预览框边框线（黄色）
+    this.previewHelper = new THREE.BoxHelper(this.previewBox, 0xffff00);
+    this.scene.add(this.previewHelper);
+  }
+
+  /**
+   * 更新最终选择框（绿色）
    */
   updateSelectionBox() {
     if (!this.startPoint || !this.endPoint) return;
@@ -150,7 +206,7 @@ export class RegionSelector {
     const minZ = Math.min(this.startPoint.z, this.endPoint.z);
     const maxZ = Math.max(this.startPoint.z, this.endPoint.z);
 
-    // 创建边界框几何体
+    // 创建边界框几何体（绿色半透明）
     const geometry = new THREE.BoxGeometry(
       maxX - minX + 1,
       maxY - minY + 1,
@@ -177,9 +233,33 @@ export class RegionSelector {
     );
     this.scene.add(this.selectionBox);
 
-    // 创建边框线
+    // 创建边框线（绿色）
     this.boxHelper = new THREE.BoxHelper(this.selectionBox, 0x00ff00);
     this.scene.add(this.boxHelper);
+  }
+
+  /**
+   * 获取预览边界（第一次点击后）
+   */
+  getPreviewBounds() {
+    if (!this.startPoint || !this.currentHoverPoint) return null;
+
+    const minX = Math.min(this.startPoint.x, this.currentHoverPoint.x);
+    const maxX = Math.max(this.startPoint.x, this.currentHoverPoint.x);
+    const minY = Math.min(this.startPoint.y, this.currentHoverPoint.y);
+    const maxY = Math.max(this.startPoint.y, this.currentHoverPoint.y);
+    const minZ = Math.min(this.startPoint.z, this.currentHoverPoint.z);
+    const maxZ = Math.max(this.startPoint.z, this.currentHoverPoint.z);
+
+    return {
+      min: { x: minX, y: minY, z: minZ },
+      max: { x: maxX, y: maxY, z: maxZ },
+      size: {
+        x: maxX - minX + 1,
+        y: maxY - minY + 1,
+        z: maxZ - minZ + 1
+      }
+    };
   }
 
   /**
@@ -207,6 +287,25 @@ export class RegionSelector {
   }
 
   /**
+   * 清除预览框
+   */
+  clearPreview() {
+    if (this.previewBox) {
+      this.scene.remove(this.previewBox);
+      this.previewBox.geometry.dispose();
+      this.previewBox.material.dispose();
+      this.previewBox = null;
+    }
+
+    if (this.previewHelper) {
+      this.scene.remove(this.previewHelper);
+      this.previewHelper.geometry.dispose();
+      this.previewHelper.material.dispose();
+      this.previewHelper = null;
+    }
+  }
+
+  /**
    * 清除选择
    */
   clearSelection() {
@@ -224,9 +323,12 @@ export class RegionSelector {
       this.boxHelper = null;
     }
 
+    this.clearPreview();
+
     this.startPoint = null;
     this.endPoint = null;
-    this.isSelecting = false;
+    this.currentHoverPoint = null;
+    this.clickCount = 0;
   }
 
   /**

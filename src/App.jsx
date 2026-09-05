@@ -3330,7 +3330,7 @@ ${finalCode}
                 // 切换到精确修改模式时，自动启动区域选择
                 if (mode === 'precise' && blocks.length > 0) {
                   handleStartRegionSelection();
-                  showToast('请在 3D 场景中拖动框选区域', 'info');
+                  showToast('请在 3D 场景中单击两次选择区域', 'info');
                 } else if (mode !== 'precise') {
                   // 切换到其他模式时，取消区域选择
                   if (isRegionSelecting || regionBounds) {
