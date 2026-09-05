@@ -35,6 +35,7 @@ import { extractBlocksInRegion } from './utils/RegionSelector';
 import BlueprintQuestionnaire from './components/BlueprintQuestionnaire';
 import BlueprintViewer from './components/BlueprintViewer';
 import { executeBlueprintWorkflow, BLUEPRINT_PHASES } from './utils/blueprintEngine';
+import PreciseModificationPlanViewer from './components/PreciseModificationPlanViewer';
 
 /**
  * @typedef {Object} Variant
@@ -335,6 +336,10 @@ function App() {
   const [isBlueprintViewerOpen, setIsBlueprintViewerOpen] = useState(false);
   const [blueprintData, setBlueprintData] = useState(null);
   const [blueprintRequirements, setBlueprintRequirements] = useState(null);
+  // Precise modification workflow states
+  const [preciseModificationPlan, setPreciseModificationPlan] = useState(null);
+  const [preciseModificationAnalysis, setPreciseModificationAnalysis] = useState(null);
+  const [isPrecisePlanViewerOpen, setIsPrecisePlanViewerOpen] = useState(false);
   // Note: apiConversationHistory is now managed by useStore for persistence
   const controlsRef = useRef();
 
@@ -691,6 +696,102 @@ function App() {
     setBlueprintRequirements(null);
     setIsProcessing(false);
     showToast('已取消蓝图模式', 'info');
+  };
+
+  // Precise modification workflow handlers
+  const handlePreciseModificationApprove = async () => {
+    setIsPrecisePlanViewerOpen(false);
+    setIsProcessing(true);
+
+    // 添加执行开始消息
+    setMessages(prev => [
+      ...prev,
+      { role: 'system', content: '⚙️ 正在执行修改...' }
+    ]);
+
+    try {
+      // 执行生成的代码
+      const { executeVoxelScript } = await import('./utils/sandbox');
+      const { generateModificationCode, extractSurroundingBlocks } = await import('./utils/preciseModificationEngine');
+
+      // 如果还没有代码，现在生成
+      let code;
+      if (preciseModificationPlan.code) {
+        code = preciseModificationPlan.code;
+      } else {
+        // 重新生成代码
+        const surroundingBlocks = extractSurroundingBlocks(blocks, regionBounds, 3);
+        code = await generateModificationCode(
+          preciseModificationPlan,
+          preciseModificationAnalysis,
+          preservedBlocksRef.current,
+          regionBounds,
+          apiSettings
+        );
+      }
+
+      const modifiedBlocks = executeVoxelScript(code, true);
+
+      if (modifiedBlocks && modifiedBlocks.length >= 0) {
+        // 合并修改后的方块和保留的方块
+        const preservedBlocks = preservedBlocksRef.current || [];
+        const finalBlocks = [...preservedBlocks, ...modifiedBlocks];
+
+        useStore.getState().setBlocks(finalBlocks);
+        useStore.getState().setSemanticVoxels([]);
+
+        // 更新为完成消息
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: 'ai',
+            content: `✅ 修改完成！\n\n**修改信息**：\n- 修改区域: ${regionBounds.size.x}×${regionBounds.size.y}×${regionBounds.size.z}\n- 新方块数: ${modifiedBlocks.length}\n- 保留方块数: ${preservedBlocks.length}\n- 总方块数: ${finalBlocks.length}`,
+            hasScript: true,
+            generationMode: 'precise'
+          };
+          return updated;
+        });
+
+        // 清除选区
+        setIsRegionSelecting(false);
+        setRegionBounds(null);
+        setSelectedRegionBlocks([]);
+        if (regionSelectorRef.current) {
+          regionSelectorRef.current.clearSelection();
+        }
+
+        showToast('修改完成！', 'success');
+      } else {
+        throw new Error('修改后的建筑为空');
+      }
+    } catch (error) {
+      console.error('修改执行失败:', error);
+
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'system',
+          content: `❌ 修改失败: ${error.message}`
+        };
+        return updated;
+      });
+
+      showToast(`修改失败: ${error.message}`, 'error');
+    } finally {
+      setIsProcessing(false);
+      setPreciseModificationPlan(null);
+      setPreciseModificationAnalysis(null);
+      preservedBlocksRef.current = null;
+    }
+  };
+
+  const handlePreciseModificationCancel = () => {
+    setIsPrecisePlanViewerOpen(false);
+    setPreciseModificationPlan(null);
+    setPreciseModificationAnalysis(null);
+    preservedBlocksRef.current = null;
+    setIsProcessing(false);
+    showToast('已取消精确修改', 'info');
   };
 
   // Handle stop generation
@@ -1559,10 +1660,97 @@ function App() {
     const effectiveMode = generationMode;
     const isAgentMode = effectiveMode === 'workflow' || effectiveMode === 'agentSkills';
 
+    // 精确修改模式：启动工作流审批流程
+    if (generationMode === 'precise' && regionBounds && selectedRegionBlocks.length > 0) {
+      // 添加用户消息
+      setMessages(prev => [
+        ...prev,
+        { role: 'system', content: '🔍 正在分析选中区域和周边环境...' }
+      ]);
+
+      setIsProcessing(true);
+
+      try {
+        const { executePreciseModificationWorkflow, extractSurroundingBlocks } = await import('./utils/preciseModificationEngine');
+
+        // 提取区域外的方块（需要保留）
+        const preservedBlocks = blocks.filter(block => {
+          const [x, y, z] = block.position;
+          return !(
+            x >= regionBounds.min.x && x <= regionBounds.max.x &&
+            y >= regionBounds.min.y && y <= regionBounds.max.y &&
+            z >= regionBounds.min.z && z <= regionBounds.max.z
+          );
+        });
+
+        // 提取周边方块
+        const surroundingBlocks = extractSurroundingBlocks(blocks, regionBounds, 3);
+
+        // 执行工作流（分析 + 规划）
+        const result = await executePreciseModificationWorkflow({
+          regionBlocks: selectedRegionBlocks,
+          surroundingBlocks,
+          preservedBlocks,
+          bounds: regionBounds,
+          userRequest: userMessage,
+          settings: apiSettings,
+          onProgress: ({ phase, message, progress }) => {
+            console.log(`[Precise Workflow] ${phase}: ${message} (${progress}%)`);
+            setMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                role: 'system',
+                content: `🔍 ${message} (${progress}%)`
+              };
+              return updated;
+            });
+          }
+        });
+
+        if (result.success) {
+          // 保存分析和计划结果
+          setPreciseModificationAnalysis(result.analysis);
+          setPreciseModificationPlan(result.plan);
+          preservedBlocksRef.current = preservedBlocks; // 保存到 ref 供后续使用
+
+          // 更新消息
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              role: 'system',
+              content: '✅ 分析和规划完成！请审批修改方案。'
+            };
+            return updated;
+          });
+
+          // 显示审批界面
+          setIsPrecisePlanViewerOpen(true);
+          showToast('修改计划已生成，请审批', 'success');
+        } else {
+          throw new Error(result.error || '工作流执行失败');
+        }
+      } catch (error) {
+        console.error('精确修改工作流失败:', error);
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: 'system',
+            content: `❌ 分析失败: ${error.message}`
+          };
+          return updated;
+        });
+        showToast(`分析失败: ${error.message}`, 'error');
+      } finally {
+        setIsProcessing(false);
+      }
+
+      return; // 退出 handleSend，等待用户审批
+    }
+
     // 精确修改模式：构建增强的 prompt，包含区域上下文
     let enhancedPrompt = userMessage;
     let preservedBlocks = null; // 保存区域外的方块
-    if (generationMode === 'precise' && regionBounds && selectedRegionBlocks.length > 0) {
+    if (false && generationMode === 'precise' && regionBounds && selectedRegionBlocks.length > 0) {
       const { analyzeRegionContext } = await import('./utils/RegionSelector');
       const context = analyzeRegionContext(blocks, regionBounds, 2);
 
@@ -2771,6 +2959,16 @@ ${finalCode}
           onApprove={handleBlueprintApprove}
           onModify={handleBlueprintModify}
           onCancel={handleBlueprintCancel}
+        />
+      )}
+
+      {/* Precise Modification Plan Viewer */}
+      {isPrecisePlanViewerOpen && preciseModificationAnalysis && preciseModificationPlan && (
+        <PreciseModificationPlanViewer
+          analysis={preciseModificationAnalysis}
+          plan={preciseModificationPlan}
+          onApprove={handlePreciseModificationApprove}
+          onCancel={handlePreciseModificationCancel}
         />
       )}
 
