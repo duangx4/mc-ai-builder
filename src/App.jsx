@@ -636,18 +636,18 @@ function App() {
 
       // 执行生成的代码
       const { executeVoxelScript } = await import('./utils/sandbox');
-      const buildResult = executeVoxelScript(result.code);
+      const blocks = executeVoxelScript(result.code, true); // throwOnError = true
 
-      if (buildResult.success) {
-        useStore.getState().setBlocks(buildResult.blocks);
-        useStore.getState().setSemanticVoxels(buildResult.semanticVoxels || []);
+      if (blocks && blocks.length > 0) {
+        useStore.getState().setBlocks(blocks);
+        useStore.getState().setSemanticVoxels([]); // 蓝图模式不使用语义体素
 
         // 更新为完成消息
         setMessages(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = {
             role: 'ai',
-            content: `✅ 建造完成！\n\n**建筑信息**：\n- 类型: ${blueprintData.metadata.buildingType}\n- 风格: ${blueprintData.metadata.style}\n- 尺寸: ${blueprintData.metadata.size.width}×${blueprintData.metadata.size.depth}×${blueprintData.metadata.size.height}\n- 方块数: ${buildResult.blocks.length}`,
+            content: `✅ 建造完成！\n\n**建筑信息**：\n- 类型: ${blueprintData.metadata.buildingType}\n- 风格: ${blueprintData.metadata.style}\n- 尺寸: ${blueprintData.metadata.size.width}×${blueprintData.metadata.size.depth}×${blueprintData.metadata.size.height}\n- 方块数: ${blocks.length}`,
             hasScript: true,
             generationMode: 'workflow'
           };
@@ -656,7 +656,7 @@ function App() {
 
         showToast('建造完成！', 'success');
       } else {
-        throw new Error(buildResult.error || '代码执行失败');
+        throw new Error('生成的建筑为空，请检查代码');
       }
     } catch (error) {
       console.error('建造失败:', error);
