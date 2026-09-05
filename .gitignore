@@ -41,6 +41,32 @@ Thumbs.db
 .kiro/
 .claude/
 .cursor/
+.playwright-mcp/
+.shared/
+browser-cdp-skill/
+.cdp-config.json
+
+# Debug and test files
+check-*.js
+test-*.js
+test-*.html
+*.log
+*-debug.log
+debug-*.log
+server.log
+dev.log
+vite.log
+http-*.log
+lantern-debug.log
+*-screenshot.png
+current-*.png
+after-*.png
+final-*.png
+with-*.png
+red-*.png
+special-*.png
+canvas-*.png
+playwright-*.png
 
 # Vendored third-party (prismarine-web-client clone + mineflayer render server)
 # NOT project source - never commit these (contain own node_modules / MC world data)
