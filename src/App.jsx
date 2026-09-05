@@ -635,8 +635,8 @@ function App() {
       });
 
       // 执行生成的代码
-      const { executeVoxelCode } = await import('./utils/sandbox');
-      const buildResult = executeVoxelCode(result.code);
+      const { executeVoxelScript } = await import('./utils/sandbox');
+      const buildResult = executeVoxelScript(result.code);
 
       if (buildResult.success) {
         useStore.getState().setBlocks(buildResult.blocks);
