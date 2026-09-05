@@ -334,6 +334,7 @@ function App() {
   const lastInputRef = useRef('');
   const fileInputRef = useRef(null); // Ref for hidden file input
   const textareaRef = useRef(null); // Ref for textarea to reset height
+  const preservedBlocksRef = useRef(null); // 精确修改模式：保存区域外的方块
 
   const handleImageFile = (file) => {
     if (!file) return;
@@ -628,7 +629,7 @@ function App() {
       let generatedBlocks = [];
       let generatedVoxels = [];
       let generatedCount = 0;
-      
+
       if (isFirstCompleted) {
         startStreamingSession();
         generatedCount = addBlocksFromStream(finalCode);
@@ -639,22 +640,29 @@ function App() {
         const { executeVoxelScript } = await import('./utils/sandbox.js');
         const { processVoxels } = await import('./utils/architectureEngine.js');
         const rawVoxels = executeVoxelScript(finalCode);
-        
+
         const finalStateMap = new Map();
         rawVoxels.forEach(v => {
           const key = `${v.position[0]},${v.position[1]},${v.position[2]}`;
           finalStateMap.set(key, v);
         });
-        
+
         const filteredVoxels = [];
         finalStateMap.forEach((v) => {
           if (v.type !== 'AIR') {
             filteredVoxels.push(v);
           }
         });
-        
+
         generatedBlocks = processVoxels(filteredVoxels, 'DEFAULT');
         generatedVoxels = filteredVoxels;
+        generatedCount = generatedBlocks.length;
+      }
+
+      // 精确修改模式：合并区域外的保留方块
+      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+        console.log('[Precise Mode] Merging', preservedBlocksRef.current.length, 'preserved blocks with', generatedBlocks.length, 'generated blocks');
+        generatedBlocks = [...preservedBlocksRef.current, ...generatedBlocks];
         generatedCount = generatedBlocks.length;
       }
 
@@ -1107,11 +1115,18 @@ function App() {
         properties: v.properties || {}
       }));
 
+      // 精确修改模式：合并区域外的保留方块
+      let finalBlocks = newBlocks;
+      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+        console.log('[Precise Mode - Smart] Merging', preservedBlocksRef.current.length, 'preserved blocks with', newBlocks.length, 'generated blocks');
+        finalBlocks = [...preservedBlocksRef.current, ...newBlocks];
+      }
+
       // 更新变体
       updateVariant(variantId, {
         status: 'done',
         content: result.content,
-        blocks: newBlocks,
+        blocks: finalBlocks,
         semanticVoxels: voxels,
         generatedAt: Date.now(),
         plan: result.plan,
@@ -1120,7 +1135,7 @@ function App() {
         lastErrors: result.lastErrors
       });
 
-      console.log(`[Smart] Generated ${newBlocks.length} blocks`);
+      console.log(`[Smart] Generated ${finalBlocks.length} blocks (${newBlocks.length} new + ${preservedBlocksRef.current?.length || 0} preserved)`);
     } catch (error) {
       console.error('[Smart] Generation error:', error);
       updateVariant(variantId, {
@@ -1319,15 +1334,28 @@ function App() {
 
     // 精确修改模式：构建增强的 prompt，包含区域上下文
     let enhancedPrompt = userMessage;
+    let preservedBlocks = null; // 保存区域外的方块
     if (generationMode === 'precise' && regionBounds && selectedRegionBlocks.length > 0) {
       const { analyzeRegionContext } = await import('./utils/RegionSelector');
       const context = analyzeRegionContext(blocks, regionBounds, 2);
+
+      // 提取区域外的方块（这些需要保留）
+      preservedBlocks = blocks.filter(block => {
+        const [x, y, z] = block.position;
+        return !(
+          x >= regionBounds.min.x && x <= regionBounds.max.x &&
+          y >= regionBounds.min.y && y <= regionBounds.max.y &&
+          z >= regionBounds.min.z && z <= regionBounds.max.z
+        );
+      });
 
       // 构建区域描述
       const regionDesc = `选中区域范围：
 - 坐标: (${regionBounds.min.x}, ${regionBounds.min.y}, ${regionBounds.min.z}) 到 (${regionBounds.max.x}, ${regionBounds.max.y}, ${regionBounds.max.z})
 - 尺寸: ${regionBounds.size.x} × ${regionBounds.size.y} × ${regionBounds.size.z}
-- 方块数: ${selectedRegionBlocks.length}`;
+- 方块数: ${selectedRegionBlocks.length}
+- 建筑总方块数: ${blocks.length}
+- 区域外方块数: ${preservedBlocks.length}`;
 
       // 构建周围上下文描述
       let contextDesc = '';
@@ -1353,13 +1381,19 @@ ${regionBlocksJson}
 ${userMessage}
 
 【重要约束】
-1. 只能修改上述选中区域内的方块
-2. 必须保持区域外的所有方块不变
-3. 输出完整的建筑代码（包含选中区域的修改 + 区域外的原方块）
+1. 只需要输出修改后的选中区域的方块代码
+2. 不需要输出区域外的方块（系统会自动保留）
+3. 确保输出的方块坐标在选中区域范围内
 4. 理解整体建筑风格，确保修改后的部分与周围协调
-5. 尊重用户需求，但保持建筑的结构完整性`;
+5. 如果用户要求"去除"或"删除"，输出空数组 []`;
 
-      console.log('[Precise Mode] Enhanced prompt with region context');
+      console.log('[Precise Mode] Enhanced prompt with region context, preserving', preservedBlocks.length, 'blocks outside region');
+
+      // 保存到 ref，供代码执行后合并使用
+      preservedBlocksRef.current = preservedBlocks;
+    } else {
+      // 非精确修改模式，清除保留的方块
+      preservedBlocksRef.current = null;
     }
 
     // 创意模式跳过并发生成逻辑
