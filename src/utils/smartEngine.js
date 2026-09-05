@@ -32,12 +32,25 @@ import { getSdfPrimitivesHint } from './sdfTemplates.js';
 // ============================================================
 
 /**
- * 引擎阶段枚举
+ * 融合版五步工作流阶段
+ *
+ * 用户视角（3 个大阶段）：
+ * - 规划设计：Planning
+ * - 精细建造：Construction + Syntax Check
+ * - 质量优化：Quality Check + Refinement
+ *
+ * 技术实现（5 个内部步骤）：
+ * - Planning: 规划蓝图
+ * - Construction: 生成代码
+ * - Syntax Check: 快速语法验证（新增，快速失败）
+ * - Quality Check: AI 智能质量检查（新增，三维度评估）
+ * - Refinement: 问题修复（增强，双模式修复）
  */
 export const PHASES = {
   PLANNING: 'planning',
   CONSTRUCTION: 'construction',
-  VALIDATION: 'validation',
+  SYNTAX_CHECK: 'syntax_check',   // 新增
+  QUALITY_CHECK: 'quality_check', // 新增（替代 VALIDATION）
   REFINEMENT: 'refinement',
   DONE: 'done'
 };
@@ -48,7 +61,8 @@ export const PHASES = {
 export const PHASE_ORDER = [
   PHASES.PLANNING,
   PHASES.CONSTRUCTION,
-  PHASES.VALIDATION,
+  PHASES.SYNTAX_CHECK,
+  PHASES.QUALITY_CHECK,
   PHASES.REFINEMENT,
   PHASES.DONE
 ];
@@ -59,7 +73,8 @@ export const PHASE_ORDER = [
 const PHASE_ALLOWED_TOOLS = {
   [PHASES.PLANNING]: ['read_skill', 'read_subdoc'],
   [PHASES.CONSTRUCTION]: ['generate_code', 'modify_code'],
-  [PHASES.VALIDATION]: [], // 本地执行，无工具调用
+  [PHASES.SYNTAX_CHECK]: [], // 本地执行，无工具调用
+  [PHASES.QUALITY_CHECK]: [], // AI 评估，无工具调用（直接调用 LLM）
   [PHASES.REFINEMENT]: ['modify_code'],
   [PHASES.DONE]: []
 };
@@ -83,17 +98,19 @@ export function getAllowedTools(phase) {
 export function canTransition(fromPhase, toPhase, _reason = '') {
   const fromIndex = PHASE_ORDER.indexOf(fromPhase);
   const toIndex = PHASE_ORDER.indexOf(toPhase);
-  
-  // 不允许回退（除了 validation → refinement 这个特殊情况）
-  if (fromPhase === PHASES.VALIDATION && toPhase === PHASES.REFINEMENT) {
-    return true;
+
+  // 特殊情况：允许从 REFINEMENT 回到 SYNTAX_CHECK 或 QUALITY_CHECK
+  if (fromPhase === PHASES.REFINEMENT) {
+    if (toPhase === PHASES.SYNTAX_CHECK || toPhase === PHASES.QUALITY_CHECK) {
+      return true;
+    }
   }
-  
+
   // 允许向前推进
   if (toIndex > fromIndex) {
     return true;
   }
-  
+
   // 其他情况不允许
   return false;
 }
@@ -311,6 +328,7 @@ export async function generateWithSmartEngine(config) {
   let plan = null;
   let generatedCode = '';
   let lastErrors = [];
+  let lastQualityReport = null; // 新增：保存质量检查报告
   let truncated = false;
   let refineCount = 0;
   let stepCount = 0;
@@ -434,8 +452,12 @@ export async function generateWithSmartEngine(config) {
           await executeConstructionPhase();
           break;
 
-        case PHASES.VALIDATION:
-          await executeValidationPhase();
+        case PHASES.SYNTAX_CHECK:
+          await executeSyntaxCheckPhase();
+          break;
+
+        case PHASES.QUALITY_CHECK:
+          await executeQualityCheckPhase();
           break;
 
         case PHASES.REFINEMENT:
@@ -681,18 +703,19 @@ export async function generateWithSmartEngine(config) {
       throw new Error('No code generated');
     }
 
-    // 进入验证阶段
-    changePhase(PHASES.VALIDATION, 'Code generated');
+    // 进入语法检查阶段
+    changePhase(PHASES.SYNTAX_CHECK, 'Code generated');
   }
 
   /**
-   * 执行 Validation 阶段
+   * 执行 Syntax Check 阶段（新增）
+   * 快速失败机制：在昂贵的 Quality Check 之前验证基础语法
    */
-  async function executeValidationPhase() {
-    callbacks.onStatus?.('Validation: 验证代码...');
+  async function executeSyntaxCheckPhase() {
+    callbacks.onStatus?.('Syntax Check: 验证代码语法...');
 
     if (!generatedCode) {
-      throw new Error('No code to validate');
+      throw new Error('No code to check');
     }
 
     // 检查截断
@@ -702,7 +725,7 @@ export async function generateWithSmartEngine(config) {
       callbacks.onStatus?.('警告: 代码可能被截断');
     }
 
-    // 执行代码
+    // 执行代码验证语法
     try {
       const dedupedCode = dedupeTopLevelConsts(generatedCode);
       const voxels = executeVoxelScript(dedupedCode, true);
@@ -711,15 +734,17 @@ export async function generateWithSmartEngine(config) {
         throw new Error('Code executed but produced no blocks');
       }
 
-      callbacks.onStatus?.(`验证通过: 生成 ${voxels.length} 个方块`);
-      changePhase(PHASES.DONE, 'Validation passed');
-    } catch (error) {
-      lastErrors.push(`Validation error: ${error.message}`);
-      callbacks.onStatus?.(`验证失败: ${error.message}`);
+      callbacks.onStatus?.(`✅ 语法通过: 生成 ${voxels.length} 个方块`);
 
-      // 进入修复阶段
+      // 语法通过 → 进入质量检查
+      changePhase(PHASES.QUALITY_CHECK, 'Syntax valid');
+    } catch (error) {
+      lastErrors.push(`Syntax error: ${error.message}`);
+      callbacks.onStatus?.(`❌ 语法错误: ${error.message}`);
+
+      // 语法错误 → 直接修复，跳过质量检查（节省成本）
       if (refineCount < MAX_REFINE) {
-        changePhase(PHASES.REFINEMENT, `Validation failed: ${error.message}`);
+        changePhase(PHASES.REFINEMENT, `Syntax check failed: ${error.message}`);
       } else {
         callbacks.onStatus?.('已达最大修复次数，返回当前代码');
         changePhase(PHASES.DONE, 'Max refinements reached');
@@ -728,21 +753,208 @@ export async function generateWithSmartEngine(config) {
   }
 
   /**
-   * 执行 Refinement 阶段
+   * 执行 Quality Check 阶段（新增核心）
+   * AI 智能质量检查：三维度评估（结构/风格/细节）
+   */
+  async function executeQualityCheckPhase() {
+    callbacks.onStatus?.('Quality Check: AI 正在检查建筑质量...');
+
+    if (!generatedCode) {
+      throw new Error('No code to check quality');
+    }
+
+    // 小建筑跳过质量检查（< 50 方块）
+    const dedupedCode = dedupeTopLevelConsts(generatedCode);
+    const voxels = executeVoxelScript(dedupedCode, true);
+    const voxelCount = voxels.length;
+
+    if (voxelCount < 50) {
+      callbacks.onStatus?.(`⚡ 小型建筑 (${voxelCount} 方块)，跳过质量检查`);
+      changePhase(PHASES.DONE, 'Small building, quality check skipped');
+      return;
+    }
+
+    // 构建质量检查 Prompt
+    const qualityPrompt = `你是一位资深的 Minecraft 建筑师。请检查以下建筑的质量：
+
+**建筑信息：**
+- 风格：${plan?.style || '未指定'}
+- 方块数：${voxelCount}
+- 蓝图：${plan ? JSON.stringify(plan.blocks) : '无'}
+
+**生成的代码片段：**
+\`\`\`javascript
+${generatedCode.substring(0, 1000)}...
+\`\`\`
+
+请从以下 3 个维度评估（每项 0-10 分）：
+
+1. **结构完整性** (structural_score)
+   - 建筑是否完整？有无缺失部分？
+   - 比例是否合理？是否协调？
+   - 是否稳定？是否悬空？
+
+2. **风格一致性** (style_score)
+   - 材料选择是否符合风格？
+   - 造型是否匹配主题？
+   - 整体感觉是否统一？
+
+3. **细节丰富度** (detail_score)
+   - 装饰是否足够？
+   - 是否有变化和层次？
+   - 是否生动有趣？
+
+**输出格式（严格 JSON）：**
+\`\`\`json
+{
+  "overall_score": 8.5,
+  "structural_score": 9,
+  "style_score": 8,
+  "detail_score": 8,
+  "issues": [
+    {
+      "severity": "medium",
+      "category": "structure",
+      "description": "屋顶坡度过陡",
+      "suggestion": "将屋顶高度从 8 格降低到 6 格"
+    }
+  ],
+  "passed": true,
+  "needs_refinement": false
+}
+\`\`\`
+
+**评分标准：**
+- overall_score >= 7.0 → passed = true
+- 发现严重问题 → needs_refinement = true
+- issues 数组包含所有发现的问题
+
+只输出 JSON，不要有其他文字。`;
+
+    // 调用 LLM 进行质量检查
+    try {
+      messages.push({
+        role: 'user',
+        content: qualityPrompt
+      });
+
+      const qualityResponse = await callLLMForQualityCheck();
+      const report = parseQualityReport(qualityResponse);
+
+      // 回调质量报告
+      if (callbacks.onQualityReport) {
+        callbacks.onQualityReport(report);
+      }
+
+      callbacks.onStatus?.(`Quality Check 完成: 总分 ${report.overall_score}/10`);
+
+      if (report.passed && !report.needs_refinement) {
+        // ✅ 质量优秀 → 完成
+        callbacks.onStatus?.(`✅ 质量优秀 (${report.overall_score}/10)`);
+        changePhase(PHASES.DONE, `Quality excellent (${report.overall_score}/10)`);
+      } else {
+        // ⚠️ 需要改进 → 进入 Refinement
+        lastQualityReport = report;
+        callbacks.onStatus?.(`⚠️ 发现 ${report.issues.length} 个质量问题`);
+
+        if (refineCount < MAX_REFINE) {
+          changePhase(PHASES.REFINEMENT, `Quality issues found (${report.issues.length} issues)`);
+        } else {
+          callbacks.onStatus?.('已达最大修复次数，接受当前质量');
+          changePhase(PHASES.DONE, 'Max refinements reached');
+        }
+      }
+    } catch (error) {
+      console.error('[Quality Check] Failed:', error);
+      callbacks.onStatus?.('质量检查失败，跳过');
+      // 质量检查失败不阻塞，直接完成
+      changePhase(PHASES.DONE, 'Quality check failed, proceeding');
+    }
+  }
+
+  /**
+   * 执行 Refinement 阶段（增强版）
+   * 双模式修复：语法错误 + 质量问题
    */
   async function executeRefinementPhase() {
     refineCount++;
-    callbacks.onStatus?.(`Refinement (${refineCount}/${MAX_REFINE}): 修复错误...`);
+    callbacks.onStatus?.(`Refinement (${refineCount}/${MAX_REFINE}): 修复问题...`);
 
-    // 添加错误信息到消息历史
+    // 区分两种修复场景
+    if (lastErrors.length > 0 && !lastQualityReport) {
+      // 场景 A: 语法错误修复（来自 SYNTAX_CHECK）
+      await fixSyntaxError();
+    } else if (lastQualityReport) {
+      // 场景 B: 质量问题修复（来自 QUALITY_CHECK）
+      await improveQuality();
+    } else {
+      // 未知场景，默认语法修复
+      await fixSyntaxError();
+    }
+  }
+
+  /**
+   * 修复语法错误
+   */
+  async function fixSyntaxError() {
     const errorMsg = lastErrors[lastErrors.length - 1] || 'Unknown error';
     messages.push({
       role: 'system',
-      content: `## 验证失败\n\n错误信息: ${errorMsg}\n\n请使用 modify_code 修复代码中的错误。注意只修改有问题的部分，不要重新生成整个代码。`
+      content: `## 语法错误\n\n错误信息: ${errorMsg}\n\n请使用 modify_code 修复代码中的语法错误。注意只修改有问题的部分，不要重新生成整个代码。`
     });
 
     // 发起 LLM 请求
     await callLLMWithTools();
+
+    // 更新代码
+    generatedCode = context.currentCode;
+
+    // 重新语法检查
+    changePhase(PHASES.SYNTAX_CHECK, 'Syntax error fixed, re-checking');
+  }
+
+  /**
+   * 改进质量问题
+   */
+  async function improveQuality() {
+    const issues = lastQualityReport.issues || [];
+
+    const refinementPrompt = `质量检查发现 ${issues.length} 个问题，请使用 modify_code 逐一修复：
+
+${issues.map((issue, i) => `
+${i + 1}. **${issue.category}** (${issue.severity})
+   问题：${issue.description}
+   建议：${issue.suggestion}
+`).join('\n')}
+
+**当前代码：**
+\`\`\`javascript
+${generatedCode.substring(0, 1000)}...
+\`\`\`
+
+请调用 modify_code 工具，按建议修复代码。`;
+
+    messages.push({
+      role: 'user',
+      content: refinementPrompt
+    });
+
+    await callLLMWithTools();
+
+    // 更新代码
+    generatedCode = context.currentCode;
+
+    // 清空质量报告，重新质量检查
+    lastQualityReport = null;
+    changePhase(PHASES.QUALITY_CHECK, 'Quality refinement completed, re-checking');
+  }
+
+  /**
+   * 旧的 Validation 阶段（已废弃，保留向后兼容）
+   */
+  async function executeValidationPhase() {
+    // 重定向到 Syntax Check
+    await executeSyntaxCheckPhase();
 
     // 更新代码
     generatedCode = context.currentCode;
@@ -909,10 +1121,141 @@ export async function generateWithSmartEngine(config) {
       codeGenerated
     };
   }
+
+  /**
+   * 调用 LLM 进行质量检查（不使用工具）
+   * @returns {string} LLM 返回的 JSON 字符串
+   */
+  async function callLLMForQualityCheck() {
+    const requestBody = {
+      model: model,
+      messages: messages,
+      stream: false, // 质量检查不需要流式
+      temperature: 0.3 // 降低温度，让评分更稳定
+    };
+
+    // 发起请求
+    const { url: reqUrl, fetchOptions } = wrapRequest(
+      baseUrl,
+      '/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(requestBody),
+        signal
+      }
+    );
+
+    const response = await fetchWithRetry(
+      reqUrl,
+      fetchOptions,
+      {
+        timeout: settings.timeout || 60000,
+        maxRetries: 2
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content || '';
+
+    // 添加到消息历史
+    messages.push({
+      role: 'assistant',
+      content: content
+    });
+
+    return content;
+  }
+}
+
+// ============================================================
+// 质量检查辅助函数
+// ============================================================
+
+/**
+ * 解析质量检查报告
+ * @param {string} text - LLM 返回的文本
+ * @returns {Object} 解析后的质量报告
+ */
+function parseQualityReport(text) {
+  try {
+    // 提取 JSON（可能被代码块包裹）
+    let jsonText = text.trim();
+
+    // 移除 markdown 代码块
+    const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[1].trim();
+    }
+
+    const report = JSON.parse(jsonText);
+
+    // 验证必需字段
+    if (typeof report.overall_score !== 'number') {
+      throw new Error('Missing overall_score');
+    }
+
+    // 设置默认值
+    return {
+      overall_score: report.overall_score || 0,
+      structural_score: report.structural_score || 0,
+      style_score: report.style_score || 0,
+      detail_score: report.detail_score || 0,
+      issues: Array.isArray(report.issues) ? report.issues : [],
+      passed: report.passed !== false, // 默认通过
+      needs_refinement: report.needs_refinement === true
+    };
+  } catch (error) {
+    console.error('[parseQualityReport] Failed to parse:', error);
+    console.error('[parseQualityReport] Input text:', text.substring(0, 500));
+
+    // 返回默认报告（通过）
+    return {
+      overall_score: 7.0,
+      structural_score: 7.0,
+      style_score: 7.0,
+      detail_score: 7.0,
+      issues: [],
+      passed: true,
+      needs_refinement: false,
+      parse_error: error.message
+    };
+  }
+}
+
+/**
+ * 获取用户友好的阶段信息
+ * @param {string} internalPhase - 内部阶段名称
+ * @returns {Object} { stage: string, progress: number }
+ */
+export function getUserPhaseInfo(internalPhase) {
+  switch(internalPhase) {
+    case PHASES.PLANNING:
+      return { stage: '规划设计', progress: 20 };
+    case PHASES.CONSTRUCTION:
+      return { stage: '精细建造', progress: 50 };
+    case PHASES.SYNTAX_CHECK:
+      return { stage: '精细建造', progress: 65 };
+    case PHASES.QUALITY_CHECK:
+      return { stage: '质量优化', progress: 85 };
+    case PHASES.REFINEMENT:
+      return { stage: '质量优化', progress: 95 };
+    case PHASES.DONE:
+      return { stage: '完成', progress: 100 };
+    default:
+      return { stage: '处理中', progress: 50 };
+  }
 }
 
 // ============================================================
 // 导出供测试使用
 // ============================================================
 
-export { checkCodeTruncation };
+export { checkCodeTruncation, parseQualityReport };
