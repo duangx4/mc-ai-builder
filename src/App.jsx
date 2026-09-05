@@ -30,7 +30,7 @@ import { MousePointer2, Plane } from 'lucide-react';
 import PromptOptimizer from './components/PromptOptimizer';
 import ModeSelector from './components/ModeSelector';
 import RegionSelectionUI from './components/RegionSelectionUI';
-import RegionSelectorHandler from './components/RegionSelectorHandler';
+import GizmoRegionSelector from './components/GizmoRegionSelector';
 import { extractBlocksInRegion } from './utils/RegionSelector';
 
 /**
@@ -325,6 +325,7 @@ function App() {
   const [isRegionSelecting, setIsRegionSelecting] = useState(false);
   const [regionBounds, setRegionBounds] = useState(null);
   const [selectedRegionBlocks, setSelectedRegionBlocks] = useState([]);
+  const [regionControlMode, setRegionControlMode] = useState('translate'); // 'translate' or 'scale'
   const regionSelectorRef = useRef(null);
   // Note: apiConversationHistory is now managed by useStore for persistence
   const controlsRef = useRef();
@@ -2376,6 +2377,8 @@ ${finalCode}
         isSelecting={isRegionSelecting}
         bounds={regionBounds}
         blockCount={selectedRegionBlocks.length}
+        controlMode={regionControlMode}
+        onControlModeChange={setRegionControlMode}
         onConfirm={handleConfirmRegionSelection}
         onCancel={handleCancelRegionSelection}
         onReset={handleResetRegionSelection}
@@ -3628,21 +3631,17 @@ ${finalCode}
 
           <VoxelWorld version={selectedVersion} />
 
-          {/* 区域选择处理器 */}
-          <RegionSelectorHandler
+          {/* 区域选择器（Gizmo 模式）*/}
+          <GizmoRegionSelector
             isActive={isRegionSelecting}
             onBoundsChange={(bounds) => {
               setRegionBounds(bounds);
-            }}
-            onSelectionEnd={(bounds) => {
-              setRegionBounds(bounds);
-              // 提取选中区域的方块
+              // 实时提取选中区域的方块
               const blocksInRegion = extractBlocksInRegion(blocks, bounds);
               setSelectedRegionBlocks(blocksInRegion);
-              console.log('[RegionSelection] Selection ended:', {
-                bounds,
-                blockCount: blocksInRegion.length
-              });
+            }}
+            onBoxCreated={(position) => {
+              console.log('[App] Region box created at:', position);
             }}
           />
         </Canvas>

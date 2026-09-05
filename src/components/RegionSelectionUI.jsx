@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Check, X, RotateCcw } from 'lucide-react';
+import { X, Check, RotateCcw, Move, Maximize2 } from 'lucide-react';
 
 /**
  * 区域选择 UI 组件
@@ -9,6 +9,8 @@ const RegionSelectionUI = ({
   isSelecting,
   bounds,
   blockCount,
+  controlMode = 'translate',
+  onControlModeChange,
   onConfirm,
   onCancel,
   onReset,
@@ -22,18 +24,46 @@ const RegionSelectionUI = ({
     <div className="fixed top-24 right-6 bg-neutral-900/95 backdrop-blur-sm border border-white/20 rounded-xl p-4 shadow-2xl z-40 min-w-[280px]">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3 pb-3 border-b border-white/10">
-        <Target className="w-5 h-5 text-green-400" />
+        <div className="w-5 h-5 bg-yellow-400 rounded opacity-60"></div>
         <h3 className="text-white font-bold">
           {t('Region Selection', '区域选择')}
         </h3>
       </div>
 
+      {/* Control Mode Switch */}
+      {bounds && (
+        <div className="mb-4 bg-neutral-800/50 rounded-lg p-2 flex gap-1">
+          <button
+            onClick={() => onControlModeChange && onControlModeChange('translate')}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs font-medium transition-all ${
+              controlMode === 'translate'
+                ? 'bg-blue-500 text-white shadow'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-700/50'
+            }`}
+          >
+            <Move size={14} />
+            {t('Move', '移动')}
+          </button>
+          <button
+            onClick={() => onControlModeChange && onControlModeChange('scale')}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-xs font-medium transition-all ${
+              controlMode === 'scale'
+                ? 'bg-purple-500 text-white shadow'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-700/50'
+            }`}
+          >
+            <Maximize2 size={14} />
+            {t('Scale', '缩放')}
+          </button>
+        </div>
+      )}
+
       {/* Selection Status */}
-      {isSelecting ? (
+      {isSelecting && !bounds ? (
         <div className="mb-4">
           <div className="flex items-center gap-2 text-sm text-yellow-400 mb-2">
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-            {t('Selecting... Click twice to set region', '选择中... 单击两次设置区域')}
+            {t('Click scene to place box', '点击场景放置选择框')}
           </div>
         </div>
       ) : null}
@@ -136,12 +166,21 @@ const RegionSelectionUI = ({
       </div>
 
       {/* Instructions */}
-      {isSelecting && (
+      {isSelecting && !bounds && (
         <div className="mt-4 pt-4 border-t border-white/10">
           <div className="text-xs text-neutral-400 space-y-1">
-            <div>💡 {t('Click once to set start point', '单击一次设置起点')}</div>
-            <div>🎯 {t('Click again to set end point', '再次单击设置终点')}</div>
-            <div>🟡 {t('Yellow box shows preview', '黄色框显示预览')}</div>
+            <div>💡 {t('Click to place yellow box', '单击放置黄色选择框')}</div>
+            <div>🔵 {t('Drag blue arrows to move', '拖动蓝色箭头移动')}</div>
+            <div>🟣 {t('Switch to scale mode to resize', '切换缩放模式调整大小')}</div>
+          </div>
+        </div>
+      )}
+
+      {bounds && (
+        <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="text-xs text-neutral-400 space-y-1">
+            <div>🎯 {t('Adjust position and size', '调整位置和大小')}</div>
+            <div>✅ {t('Click confirm when ready', '完成后点击确认')}</div>
           </div>
         </div>
       )}
