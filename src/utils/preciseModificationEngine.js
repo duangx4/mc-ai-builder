@@ -12,6 +12,7 @@ import { fetchAIResponse } from './ai.js';
 import {
   extractAIContent,
   extractJSON,
+  extractCodeBlock,
   formatAIError,
   validateAPISettings,
   createUserFriendlyError
