@@ -1257,6 +1257,12 @@ function App() {
 
     const userMessage = actualPrompt || inputText.trim();
 
+    // 精确修改模式：检查是否已选择区域
+    if (generationMode === 'precise' && (!regionBounds || selectedRegionBlocks.length === 0)) {
+      showToast('请先框选要修改的区域', 'error');
+      return;
+    }
+
     // Save user input for potential restore on stop
     if (!actualPrompt) {
       lastInputRef.current = inputText.trim();
@@ -1310,7 +1316,52 @@ function App() {
     // 确定实际使用的生成模式
     const effectiveMode = generationMode;
     const isAgentMode = effectiveMode === 'workflow' || effectiveMode === 'agentSkills';
-    
+
+    // 精确修改模式：构建增强的 prompt，包含区域上下文
+    let enhancedPrompt = userMessage;
+    if (generationMode === 'precise' && regionBounds && selectedRegionBlocks.length > 0) {
+      const { analyzeRegionContext } = await import('./utils/RegionSelector');
+      const context = analyzeRegionContext(blocks, regionBounds, 2);
+
+      // 构建区域描述
+      const regionDesc = `选中区域范围：
+- 坐标: (${regionBounds.min.x}, ${regionBounds.min.y}, ${regionBounds.min.z}) 到 (${regionBounds.max.x}, ${regionBounds.max.y}, ${regionBounds.max.z})
+- 尺寸: ${regionBounds.size.x} × ${regionBounds.size.y} × ${regionBounds.size.z}
+- 方块数: ${selectedRegionBlocks.length}`;
+
+      // 构建周围上下文描述
+      let contextDesc = '';
+      if (context.materials.length > 0) {
+        const topMaterials = context.materials.slice(0, 3)
+          .map(m => `${m.type} (${m.count}个)`)
+          .join(', ');
+        contextDesc = `\n- 周围主要材质: ${topMaterials}`;
+      }
+
+      // 构建选中区域方块列表（简化格式）
+      const regionBlocksJson = JSON.stringify(selectedRegionBlocks, null, 2);
+
+      enhancedPrompt = `【精确修改模式】
+${regionDesc}${contextDesc}
+
+【当前选中区域的方块数据】
+\`\`\`json
+${regionBlocksJson}
+\`\`\`
+
+【用户修改需求】
+${userMessage}
+
+【重要约束】
+1. 只能修改上述选中区域内的方块
+2. 必须保持区域外的所有方块不变
+3. 输出完整的建筑代码（包含选中区域的修改 + 区域外的原方块）
+4. 理解整体建筑风格，确保修改后的部分与周围协调
+5. 尊重用户需求，但保持建筑的结构完整性`;
+
+      console.log('[Precise Mode] Enhanced prompt with region context');
+    }
+
     // 创意模式跳过并发生成逻辑
     const shouldUseConcurrent = concurrencyCount > 1 && !isVisualMode;
     
@@ -1353,11 +1404,12 @@ function App() {
       // 获取当前代码（用于修改）
       const currentCode = lastGeneratedCode;
       const activeImageUrl = imageUrl || (attachedImages.length > 0 ? attachedImages[0] : null);
-      
+
       // 并行发起 API 请求（传递生成模式）
+      // 精确修改模式使用增强的 prompt
       const promises = Array(concurrencyCount).fill(null).map((_, index) => {
         return generateVariant(
-          userMessage,
+          enhancedPrompt,
           index,
           abortControllers[index].signal,
           currentCode,
@@ -1582,11 +1634,11 @@ function App() {
             }
           }
 
-          // Note: We don't add "Planning" status message to main chat anymore, 
+          // Note: We don't add "Planning" status message to main chat anymore,
           // the big Agent Card will handle the UI.
 
           const result = await generatePreciseBuild(
-            userMessage,
+            enhancedPrompt,
             apiSettings.apiKey,
             apiSettings.baseUrl,
             apiSettings.model,
@@ -1954,7 +2006,7 @@ function App() {
 
           // 调用智能变体生成（v0 = 消息 variants[0]；成功后 updateVariant 已自动更新消息/3D 场景）
           await generateVariantSmart(
-            userMessage,
+            enhancedPrompt,
             0,
             abortControllerRef.current?.signal,
             currentCode,
@@ -2007,7 +2059,7 @@ function App() {
 
           // Now with API conversation history support for better context
           const result = await fetchAIResponseStream(
-            userMessage,
+            enhancedPrompt,
             apiSettings.apiKey,
             apiSettings.baseUrl,
             apiSettings.model,
@@ -3634,6 +3686,7 @@ ${finalCode}
           {/* 区域选择器（Gizmo 模式）*/}
           <GizmoRegionSelector
             isActive={isRegionSelecting}
+            controlMode={regionControlMode}
             onBoundsChange={(bounds) => {
               setRegionBounds(bounds);
               // 实时提取选中区域的方块

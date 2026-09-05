@@ -9,12 +9,12 @@ import * as THREE from 'three';
  */
 const GizmoRegionSelector = ({
   isActive,
+  controlMode = 'translate',
   onBoundsChange,
   onBoxCreated
 }) => {
   const { camera, gl } = useThree();
   const [boxPosition, setBoxPosition] = useState(null);
-  const [controlMode, setControlMode] = useState('translate');
   const raycaster = useRef(new THREE.Raycaster());
   const mouse = useRef(new THREE.Vector2());
 
