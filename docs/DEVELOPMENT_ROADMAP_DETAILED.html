@@ -654,74 +654,202 @@
             <div class="task-card">
                 <div class="task-header">
                     <div class="task-title">
-                        <h3>P1.4 - 智能模式三阶段 Workflow</h3>
-                        <p>Planning → Building → Quality Check</p>
+                        <h3>P1.4 - 智能模式五步工作流（融合版）</h3>
+                        <p>用户视角 3 阶段 | 技术实现 5 步骤</p>
                     </div>
                     <div class="task-meta">
-                        <span class="badge badge-time">⏱️ 3天</span>
-                        <span class="badge badge-difficulty">难度: 中</span>
+                        <span class="badge badge-time">⏱️ 4天</span>
+                        <span class="badge badge-difficulty">难度: 中高</span>
                         <span class="badge badge-impact">影响: 极高</span>
+                        <span class="badge" style="background: #17a2b8;">✨ 融合优化版</span>
                     </div>
                 </div>
 
                 <div class="task-body">
                     <div class="task-section">
-                        <h4>📝 任务描述</h4>
-                        <p>实现智能模式的三阶段工作流，显著提升建筑质量（预期 50-70%）。</p>
+                        <h4>📝 设计理念</h4>
+                        <p><strong>融合两个版本的优势：</strong></p>
+                        <ul class="task-list">
+                            <li>✅ <strong>用户视角简洁</strong> - 3 个清晰的大阶段（规划设计 → 精细建造 → 质量优化）</li>
+                            <li>✅ <strong>技术实现细粒度</strong> - 5 个内部步骤保证质量和可靠性</li>
+                            <li>✅ <strong>智能质量检查</strong> - AI 驱动的三维度评估（结构/风格/细节）</li>
+                            <li>✅ <strong>快速失败机制</strong> - 语法预检节省成本，避免浪费</li>
+                        </ul>
                     </div>
 
                     <div class="task-section">
-                        <h4>✅ 具体任务</h4>
+                        <h4>🔄 完整工作流程</h4>
+
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <h5 style="color: #1e3c72; margin-bottom: 15px;">📋 阶段 1: 规划设计（用户看到）</h5>
+                            <div style="margin-left: 20px;">
+                                <p><strong>步骤 1.1: PLANNING</strong></p>
+                                <ul class="subtask-list">
+                                    <li>调用 read_skill 读取风格知识</li>
+                                    <li>分析用户需求和建筑类型</li>
+                                    <li>生成结构化 BuildingPlan JSON</li>
+                                    <li>输出：蓝图（style, blocks, materials）</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <h5 style="color: #1e3c72; margin-bottom: 15px;">🏗️ 阶段 2: 精细建造（用户看到）</h5>
+                            <div style="margin-left: 20px;">
+                                <p><strong>步骤 2.1: CONSTRUCTION</strong></p>
+                                <ul class="subtask-list">
+                                    <li>基于蓝图调用 generate_code</li>
+                                    <li>分层建造（地基 → 墙体 → 屋顶）</li>
+                                    <li>输出：VoxelBuilder 代码</li>
+                                </ul>
+
+                                <p style="margin-top: 10px;"><strong>步骤 2.2: SYNTAX_CHECK（新增优化）</strong></p>
+                                <ul class="subtask-list">
+                                    <li>本地快速验证代码语法</li>
+                                    <li>检查是否生成方块（> 0）</li>
+                                    <li>✅ 通过 → 进入质量检查</li>
+                                    <li>❌ 失败 → 立即修复，跳过质量检查（节省成本）</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                            <h5 style="color: #1e3c72; margin-bottom: 15px;">✨ 阶段 3: 质量优化（用户看到）</h5>
+                            <div style="margin-left: 20px;">
+                                <p><strong>步骤 3.1: QUALITY_CHECK（新增核心）</strong></p>
+                                <ul class="subtask-list">
+                                    <li><strong>AI Agent 三维度评估：</strong></li>
+                                    <li style="margin-left: 20px;">① 结构完整性检查（缺失/比例/对称）</li>
+                                    <li style="margin-left: 20px;">② 风格一致性验证（材料/造型/主题）</li>
+                                    <li style="margin-left: 20px;">③ 细节丰富度评估（装饰/变化/层次）</li>
+                                    <li>生成 QualityReport JSON（问题清单 + 修复建议）</li>
+                                    <li>评分阈值：>= 7.0 通过，< 7.0 需优化</li>
+                                </ul>
+
+                                <p style="margin-top: 10px;"><strong>步骤 3.2: REFINEMENT（条件执行）</strong></p>
+                                <ul class="subtask-list">
+                                    <li>双模式修复：</li>
+                                    <li style="margin-left: 20px;">模式 A: 语法错误修复（来自 SYNTAX_CHECK）</li>
+                                    <li style="margin-left: 20px;">模式 B: 质量问题改进（来自 QUALITY_CHECK）</li>
+                                    <li>使用 modify_code 应用修复建议</li>
+                                    <li>重新执行 QUALITY_CHECK（最多 2 次循环）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>💡 核心创新点</h4>
                         <ul class="task-list">
-                            <li>创建 smart-building.js Workflow</li>
-                            <li>Phase 1: Planning Agent
+                            <li><strong>快速失败机制</strong> - SYNTAX_CHECK 在昂贵的 Quality Check 前拦截语法错误</li>
+                            <li><strong>AI 智能质量检查</strong> - 不仅验证代码执行，更评估建筑美学质量</li>
+                            <li><strong>三维度评估体系</strong> - 结构/风格/细节全面打分（0-10 分）</li>
+                            <li><strong>双模式修复</strong> - 区分语法错误和质量问题，精准修复</li>
+                            <li><strong>用户体验优化</strong> - 5 个内部步骤映射为 3 个用户阶段，清晰直观</li>
+                        </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>✅ 具体实现任务</h4>
+                        <ul class="task-list">
+                            <li>修改 src/utils/smartEngine.js
                                 <ul class="subtask-list">
-                                    <li>调用 /knowledge 技能查询风格</li>
-                                    <li>生成详细蓝图 JSON</li>
-                                    <li>规划尺寸、材料、特征</li>
+                                    <li>新增 PHASES.SYNTAX_CHECK 阶段</li>
+                                    <li>新增 PHASES.QUALITY_CHECK 阶段（替代简单 Validation）</li>
+                                    <li>实现 executeQualityCheck() 函数（AI 质量评估）</li>
+                                    <li>增强 executeRefinementPhase() 支持双模式修复</li>
                                 </ul>
                             </li>
-                            <li>Phase 2: Building Phase
+                            <li>创建质量检查系统
                                 <ul class="subtask-list">
-                                    <li>按蓝图生成 VoxelBuilder 代码</li>
-                                    <li>结构化、分层建造</li>
+                                    <li>设计 QualityReport JSON Schema</li>
+                                    <li>实现三维度评估 Prompt</li>
+                                    <li>parseQualityReport() 解析器</li>
+                                    <li>质量阈值配置（7.0 通过，8.5 优秀）</li>
                                 </ul>
                             </li>
-                            <li>Phase 3: Quality Check Agent
+                            <li>用户体验映射
                                 <ul class="subtask-list">
-                                    <li>检查结构完整性</li>
-                                    <li>验证风格一致性</li>
-                                    <li>修复发现的问题</li>
+                                    <li>getUserProgress() - 5步骤映射3阶段</li>
+                                    <li>阶段进度条显示（30% / 70% / 100%）</li>
+                                    <li>友好的阶段名称（规划设计/精细建造/质量优化）</li>
                                 </ul>
                             </li>
-                            <li>进度展示 UI</li>
-                            <li>错误处理和重试机制</li>
+                            <li>性能优化
+                                <ul class="subtask-list">
+                                    <li>SYNTAX_CHECK 快速失败节省 API 成本</li>
+                                    <li>小建筑（< 50 方块）跳过质量检查</li>
+                                    <li>最多 2 次质量优化循环，避免无限重试</li>
+                                </ul>
+                            </li>
                         </ul>
                     </div>
 
                     <div class="task-section">
                         <h4>🛠️ 技术栈</h4>
                         <div class="tech-stack">
-                            <span class="tech-tag">Workflow 系统</span>
-                            <span class="tech-tag">Agent V2</span>
+                            <span class="tech-tag">smartEngine.js</span>
+                            <span class="tech-tag">Agent V2 工具</span>
                             <span class="tech-tag">技能系统</span>
-                            <span class="tech-tag">Claude API</span>
+                            <span class="tech-tag">结构化 JSON</span>
+                            <span class="tech-tag">AI 质量评估</span>
                         </div>
                     </div>
 
                     <div class="deliverables">
                         <h5>📦 交付物</h5>
                         <ul class="task-list">
-                            <li>.claude/workflows/smart-building.js</li>
-                            <li>src/agents/PlanningAgent.js</li>
-                            <li>src/agents/QualityAgent.js</li>
-                            <li>进度追踪 UI 组件</li>
+                            <li>src/utils/smartEngine.js（增强版，+200 行）</li>
+                            <li>QualityReport Schema 文档</li>
+                            <li>质量检查 Prompt 模板</li>
+                            <li>用户进度映射逻辑</li>
+                            <li>性能优化配置</li>
                         </ul>
+                    </div>
+
+                    <div class="task-section">
+                        <h4>📊 预期效果对比</h4>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background: #e9ecef;">
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">指标</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">当前实现</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">融合版</th>
+                                    <th style="padding: 10px; border: 1px solid #dee2e6;">提升</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">用户阶段数</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">4 个（困惑）</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>3 个（清晰）</strong></td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6; color: #28a745;">✅ +25%</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">质量检查</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">仅代码执行</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>AI 三维评估</strong></td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6; color: #28a745;">✅ 质的飞跃</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">成本优化</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">无</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>快速失败</strong></td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6; color: #28a745;">✅ -30% API 调用</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">建筑质量</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">基准</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;"><strong>显著提升</strong></td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6; color: #28a745;">✅ +50-70%</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <div class="dependencies">
                         <h5>⚠️ 依赖项</h5>
-                        <p>需要先完成 P1.1（模式选择器）和 P1.2（智能推荐）</p>
+                        <p>基于现有 smartEngine.js 增强，无外部依赖</p>
                     </div>
                 </div>
             </div>
