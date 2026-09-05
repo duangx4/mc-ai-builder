@@ -20,6 +20,8 @@ const InteractiveRegionBox = ({
   const [size, setSize] = useState(initialSize);
 
   // 当位置或大小改变时，通知父组件
+  // 🔧 FIX: 移除 onBoundsChange 依赖，避免无限循环
+  // 原因：onBoundsChange 函数引用每次渲染都会变化，导致 useEffect 不断触发
   useEffect(() => {
     if (!onBoundsChange) return;
 
@@ -42,7 +44,7 @@ const InteractiveRegionBox = ({
     };
 
     onBoundsChange(bounds);
-  }, [position, size, onBoundsChange]);
+  }, [position, size]); // 只依赖 position 和 size，不依赖 onBoundsChange
 
   // 处理 TransformControls 变化
   const handleDrag = () => {
