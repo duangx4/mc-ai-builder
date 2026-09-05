@@ -3204,49 +3204,6 @@ ${finalCode}
                 <Palette size={12} /> {t('visualMode')}
               </button>
             </div>
-
-            {/* Group 2: Generation Mode - 只在建造模式下显示 */}
-            <div 
-              className={`flex items-center gap-3 transition-all duration-300 ease-in-out overflow-hidden ${
-                isVisualMode 
-                  ? 'max-w-0 opacity-0 scale-95' 
-                  : 'max-w-[500px] opacity-100 scale-100'
-              }`}
-            >
-              {/* Separator */}
-              <div className="h-4 w-px bg-white/10 flex-shrink-0"></div>
-
-              <div className="bg-neutral-900/80 p-1 rounded-lg flex border border-white/10 shadow-sm flex-shrink-0">
-                <button
-                  onClick={() => setGenerationMode('fast')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 ${generationMode === 'fast' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
-                  title="Fast Mode: Direct code generation, best for modifications"
-                >
-                  <Zap size={12} /> 快速
-                </button>
-                <button
-                  onClick={() => setGenerationMode('workflow')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 ${generationMode === 'workflow' || generationMode === 'agent' ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
-                  title="Workflow Mode: Configurable AI workflow with preset steps"
-                >
-                  <Wrench size={12} /> 自定义
-                </button>
-                <button
-                  onClick={() => setGenerationMode('agentSkills')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 ${generationMode === 'agentSkills' ? 'bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
-                  title="Agent Skills Mode: AI autonomously decides which skills to use"
-                >
-                  🤖 自主
-                </button>
-                <button
-                  onClick={() => setGenerationMode('smart')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 ${generationMode === 'smart' ? 'bg-green-600/20 text-green-300 border border-green-500/30 shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
-                  title="Smart Mode: Multi-phase intelligent build engine with guardrails"
-                >
-                  <Sparkles size={12} /> 智能构建
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Reference Image Indicator - REMOVED: Now works silently in background */}
@@ -3290,8 +3247,6 @@ ${finalCode}
                 setGenerationMode(mode);
                 console.log('[App] Mode changed to:', mode);
               }}
-              blockEstimate={0} // TODO: 实现方块数量估算
-              recommendedMode={null} // TODO: 实现智能推荐
               language={language}
             />
 
