@@ -2321,6 +2321,45 @@ ${userMessage}
             try {
               generatedCount = addBlocksFromStream(finalCode, true); // throwOnError = true for auto-fix
               executionError = null; // Success, clear error
+
+              // 🔧 FIX: 精确修改模式 - 在单次生成完成后合并保留方块
+              if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+                console.log('[Precise Mode - Single Generation] Merging', preservedBlocksRef.current.length, 'preserved blocks');
+
+                const currentState = useStore.getState();
+                const generatedBlocks = currentState.blocks;
+
+                // 创建位置映射以去除重复（生成的方块优先）
+                const positionMap = new Map();
+
+                // 先添加生成的方块（优先级更高）
+                generatedBlocks.forEach(block => {
+                  const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+                  positionMap.set(key, block);
+                });
+
+                // 再添加保留的方块（只添加不冲突的位置）
+                preservedBlocksRef.current.forEach(block => {
+                  const key = `${block.position[0]},${block.position[1]},${block.position[2]}`;
+                  if (!positionMap.has(key)) {
+                    positionMap.set(key, block);
+                  }
+                });
+
+                // 转换回数组，重新分配唯一 ID
+                const timestamp = Date.now();
+                const finalBlocks = Array.from(positionMap.values()).map((block, i) => ({
+                  ...block,
+                  id: `${timestamp}-${i}`
+                }));
+
+                // 更新方块到 store
+                useStore.getState().setBlocks(finalBlocks);
+                generatedCount = finalBlocks.length;
+
+                console.log('[Precise Mode - Single Generation] Final blocks:', generatedCount, '(', generatedBlocks.length, 'generated +', preservedBlocksRef.current.length, 'preserved )');
+              }
+
               break; // Exit loop on success
             } catch (err) {
               executionError = err;
