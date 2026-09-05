@@ -1,83 +1,29 @@
 /**
- * 投影工具单元测试
+ * projection.test.js - 投影计算单元测试
  */
+
 import { describe, it, expect } from 'vitest';
-import { computeProjection, computeTopProjection, computeFrontProjection, computeSideProjection, getLayerSlice } from './projection';
+import { computeProjection, getLayerSlice, getBounds } from './projection.js';
 
-describe('投影计算工具', () => {
-  describe('computeTopProjection - 俯视图', () => {
-    it('空数组返回空投影', () => {
-      const result = computeTopProjection([]);
-      expect(result.cells).toEqual([]);
-      expect(result.width).toBe(0);
-      expect(result.depth).toBe(0);
-      expect(result.height).toBe(0);
+describe('projection', () => {
+  describe('computeProjection', () => {
+    it('应该处理空数组', () => {
+      const result = computeProjection([], 'top');
+      expect(result).toEqual({ cells: [], width: 0, depth: 0, height: 0 });
     });
 
-    it('3×3×2 立方体（全 stone）返回正确俯视图', () => {
-      const voxels = [];
-      for (let x = 0; x < 3; x++) {
-        for (let y = 0; y < 2; y++) {
-          for (let z = 0; z < 3; z++) {
-            voxels.push({ position: [x, y, z], type: 'stone' });
-          }
-        }
-      }
-
-      const result = computeTopProjection(voxels);
-      
-      expect(result.width).toBe(3);
-      expect(result.depth).toBe(3);
-      expect(result.height).toBe(2);
-      expect(result.cells.length).toBe(9); // 3×3 网格
-      
-      // 每个格子都应该取 y=1 的方块（最高层）
-      result.cells.forEach(cell => {
-        expect(cell.type).toBe('stone');
-        expect(cell.y).toBe(1); // 最高 y
-      });
-    });
-
-    it('带台阶差异：底层缺一块时，取最高层正确', () => {
+    it('应该过滤空气方块', () => {
       const voxels = [
         { position: [0, 0, 0], type: 'stone' },
-        { position: [0, 1, 0], type: 'stone' },
-        { position: [1, 0, 0], type: 'stone' },
-        // [1, 1, 0] 缺失，导致 (1,0) 位置最高为 y=0
+        { position: [1, 0, 0], type: 'air' },
+        { position: [2, 0, 0], type: 'AIR' },
       ];
-
-      const result = computeTopProjection(voxels);
-      
-      expect(result.cells.length).toBe(2);
-      
-      const cell_0_0 = result.cells.find(c => c.x === 0 && c.z === 0);
-      const cell_1_0 = result.cells.find(c => c.x === 1 && c.z === 0);
-      
-      expect(cell_0_0.y).toBe(1); // 有两层，取最高
-      expect(cell_1_0.y).toBe(0); // 只有一层
-    });
-
-    it('过滤 AIR 方块', () => {
-      const voxels = [
-        { position: [0, 0, 0], type: 'stone' },
-        { position: [0, 1, 0], type: 'AIR' }, // 应被过滤
-      ];
-
-      const result = computeTopProjection(voxels);
-      
-      expect(result.cells.length).toBe(1);
+      const result = computeProjection(voxels, 'top');
+      expect(result.cells).toHaveLength(1);
       expect(result.cells[0].type).toBe('stone');
-      expect(result.cells[0].y).toBe(0);
-    });
-  });
-
-  describe('computeFrontProjection - 正视图', () => {
-    it('空数组返回空投影', () => {
-      const result = computeFrontProjection([]);
-      expect(result.cells).toEqual([]);
     });
 
-    it('3×2×3 立方体返回正确正视图（3×2 网格）', () => {
+    it('应该正确计算俯视图（top）- 3×3×2 立方体', () => {
       const voxels = [];
       for (let x = 0; x < 3; x++) {
         for (let y = 0; y < 2; y++) {
@@ -87,42 +33,32 @@ describe('投影计算工具', () => {
         }
       }
 
-      const result = computeFrontProjection(voxels);
-      
+      const result = computeProjection(voxels, 'top');
       expect(result.width).toBe(3);
-      expect(result.height).toBe(2);
       expect(result.depth).toBe(3);
-      expect(result.cells.length).toBe(6); // 3×2 网格
-      
-      // 每个格子都应该取 z=2 的方块（最前）
-      result.cells.forEach(cell => {
-        expect(cell.type).toBe('stone');
-        expect(cell.z).toBe(2); // 最大 z
-      });
+      expect(result.height).toBe(2);
+      expect(result.cells).toHaveLength(9); // 3×3 格子
     });
 
-    it('多层深度时，取最前（z 最大）', () => {
+    it('应该正确计算俯视图（top）- 取最高方块', () => {
       const voxels = [
-        { position: [0, 0, 0], type: 'dirt' },
-        { position: [0, 0, 1], type: 'grass' },
-        { position: [0, 0, 2], type: 'stone' },
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [0, 1, 0], type: 'dirt' },
+        { position: [0, 2, 0], type: 'grass_block' },
+        { position: [1, 0, 0], type: 'stone' },
       ];
 
-      const result = computeFrontProjection(voxels);
-      
-      expect(result.cells.length).toBe(1);
-      expect(result.cells[0].type).toBe('stone'); // z=2 最大
-      expect(result.cells[0].z).toBe(2);
-    });
-  });
+      const result = computeProjection(voxels, 'top');
+      expect(result.cells).toHaveLength(2);
 
-  describe('computeSideProjection - 侧视图', () => {
-    it('空数组返回空投影', () => {
-      const result = computeSideProjection([]);
-      expect(result.cells).toEqual([]);
+      const cell00 = result.cells.find(c => c.x === 0 && c.y === 0);
+      expect(cell00.type).toBe('grass_block'); // 最高的方块
+
+      const cell10 = result.cells.find(c => c.x === 1 && c.y === 0);
+      expect(cell10.type).toBe('stone');
     });
 
-    it('3×2×3 立方体返回正确侧视图（3×2 网格）', () => {
+    it('应该正确计算正视图（front）- 3×2×3', () => {
       const voxels = [];
       for (let x = 0; x < 3; x++) {
         for (let y = 0; y < 2; y++) {
@@ -132,106 +68,183 @@ describe('投影计算工具', () => {
         }
       }
 
-      const result = computeSideProjection(voxels);
-      
+      const result = computeProjection(voxels, 'front');
       expect(result.width).toBe(3);
-      expect(result.height).toBe(2);
-      expect(result.depth).toBe(3);
-      expect(result.cells.length).toBe(6); // 3×2 网格 (depth × height)
-      
-      // 每个格子都应该取 x=2 的方块（最右）
-      result.cells.forEach(cell => {
-        expect(cell.type).toBe('stone');
-        expect(cell.x).toBe(2); // 最大 x
-      });
-    });
-  });
-
-  describe('getLayerSlice - 层切片', () => {
-    it('空数组返回空切片', () => {
-      const result = getLayerSlice([], 0);
-      expect(result.cells).toEqual([]);
+      expect(result.depth).toBe(2); // 高度映射到 depth
+      expect(result.cells).toHaveLength(6); // 3×2 格子
     });
 
-    it('获取指定层的所有方块', () => {
+    it('应该正确计算正视图（front）- 取最前方块（z最大）', () => {
+      const voxels = [
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [0, 0, 1], type: 'dirt' },
+        { position: [0, 0, 2], type: 'grass_block' },
+        { position: [1, 0, 0], type: 'stone' },
+      ];
+
+      const result = computeProjection(voxels, 'front');
+      expect(result.cells).toHaveLength(2);
+
+      const cell00 = result.cells.find(c => c.x === 0 && c.y === 0);
+      expect(cell00.type).toBe('grass_block'); // z=2 最前
+    });
+
+    it('应该正确计算侧视图（side）- 3×2×3', () => {
+      const voxels = [];
+      for (let x = 0; x < 3; x++) {
+        for (let y = 0; y < 2; y++) {
+          for (let z = 0; z < 3; z++) {
+            voxels.push({ position: [x, y, z], type: 'stone' });
+          }
+        }
+      }
+
+      const result = computeProjection(voxels, 'side');
+      expect(result.width).toBe(3); // depth 映射到 width
+      expect(result.depth).toBe(2); // 高度映射到 depth
+      expect(result.cells).toHaveLength(6); // 3×2 格子
+    });
+
+    it('应该正确计算侧视图（side）- 取最右方块（x最大）', () => {
       const voxels = [
         { position: [0, 0, 0], type: 'stone' },
         { position: [1, 0, 0], type: 'dirt' },
-        { position: [0, 1, 0], type: 'grass' },
-        { position: [1, 1, 0], type: 'wood' },
+        { position: [2, 0, 0], type: 'grass_block' },
+        { position: [0, 1, 0], type: 'stone' },
       ];
 
-      const layer0 = getLayerSlice(voxels, 0);
-      expect(layer0.cells.length).toBe(2);
-      expect(layer0.cells.some(c => c.type === 'stone')).toBe(true);
-      expect(layer0.cells.some(c => c.type === 'dirt')).toBe(true);
-
-      const layer1 = getLayerSlice(voxels, 1);
-      expect(layer1.cells.length).toBe(2);
-      expect(layer1.cells.some(c => c.type === 'grass')).toBe(true);
-      expect(layer1.cells.some(c => c.type === 'wood')).toBe(true);
-    });
-
-    it('不存在的层返回空数组', () => {
-      const voxels = [
-        { position: [0, 0, 0], type: 'stone' },
-      ];
-
-      const result = getLayerSlice(voxels, 99);
-      expect(result.cells.length).toBe(0);
-    });
-  });
-
-  describe('computeProjection - 统一接口', () => {
-    it('direction="top" 调用俯视图', () => {
-      const voxels = [{ position: [0, 0, 0], type: 'stone' }];
-      const result = computeProjection(voxels, 'top');
-      expect(result.cells.length).toBeGreaterThan(0);
-    });
-
-    it('direction="front" 调用正视图', () => {
-      const voxels = [{ position: [0, 0, 0], type: 'stone' }];
-      const result = computeProjection(voxels, 'front');
-      expect(result.cells.length).toBeGreaterThan(0);
-    });
-
-    it('direction="side" 调用侧视图', () => {
-      const voxels = [{ position: [0, 0, 0], type: 'stone' }];
       const result = computeProjection(voxels, 'side');
-      expect(result.cells.length).toBeGreaterThan(0);
+      expect(result.cells).toHaveLength(2);
+
+      const cell00 = result.cells.find(c => c.x === 0 && c.y === 0);
+      expect(cell00.type).toBe('grass_block'); // x=2 最右
     });
 
-    it('未知方向抛出异常', () => {
+    it('应该处理带台阶差异的建筑', () => {
+      const voxels = [
+        // 底层 3×3
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [1, 0, 0], type: 'stone' },
+        { position: [2, 0, 0], type: 'stone' },
+        { position: [0, 0, 1], type: 'stone' },
+        { position: [1, 0, 1], type: 'stone' },
+        { position: [2, 0, 1], type: 'stone' },
+        { position: [0, 0, 2], type: 'stone' },
+        { position: [1, 0, 2], type: 'stone' },
+        { position: [2, 0, 2], type: 'stone' },
+        // 第二层少一块
+        { position: [0, 1, 0], type: 'brick' },
+        { position: [1, 1, 0], type: 'brick' },
+        // [2, 1, 0] 缺失
+        { position: [0, 1, 1], type: 'brick' },
+        { position: [1, 1, 1], type: 'brick' },
+        { position: [2, 1, 1], type: 'brick' },
+      ];
+
+      const result = computeProjection(voxels, 'top');
+      expect(result.cells).toHaveLength(9);
+
+      // (2, 0) 位置应该取底层的 stone（因为上层缺失）
+      const cell20 = result.cells.find(c => c.x === 2 && c.y === 0);
+      expect(cell20.type).toBe('stone');
+
+      // (0, 0) 位置应该取第二层的 brick
+      const cell00 = result.cells.find(c => c.x === 0 && c.y === 0);
+      expect(cell00.type).toBe('brick');
+    });
+
+    it('应该抛出错误当方向无效', () => {
       const voxels = [{ position: [0, 0, 0], type: 'stone' }];
       expect(() => computeProjection(voxels, 'invalid')).toThrow();
     });
   });
 
-  describe('边界情况', () => {
-    it('处理无效的 position 数据', () => {
-      const voxels = [
-        { position: null, type: 'stone' },
-        { position: [0], type: 'stone' },
-        { position: [0, 'invalid', 0], type: 'stone' },
-        { position: [0, 0, 0], type: 'stone' }, // 唯一有效
-      ];
-
-      const result = computeTopProjection(voxels);
-      expect(result.cells.length).toBe(1);
-      expect(result.cells[0].type).toBe('stone');
+  describe('getLayerSlice', () => {
+    it('应该返回空切片当数组为空', () => {
+      const result = getLayerSlice([], 0);
+      expect(result).toEqual({ cells: [], width: 0, depth: 0 });
     });
 
-    it('处理负坐标', () => {
+    it('应该返回空切片当指定层无方块', () => {
       const voxels = [
-        { position: [-1, 0, -1], type: 'stone' },
-        { position: [0, 0, 0], type: 'dirt' },
-        { position: [1, 0, 1], type: 'grass' },
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [1, 0, 0], type: 'stone' },
+      ];
+      const result = getLayerSlice(voxels, 5);
+      expect(result).toEqual({ cells: [], width: 0, depth: 0 });
+    });
+
+    it('应该正确返回指定层的切片', () => {
+      const voxels = [
+        // y=0 层
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [1, 0, 0], type: 'stone' },
+        { position: [2, 0, 0], type: 'stone' },
+        // y=1 层
+        { position: [0, 1, 0], type: 'brick' },
+        { position: [1, 1, 0], type: 'brick' },
+        // y=2 层
+        { position: [0, 2, 0], type: 'dirt' },
       ];
 
-      const result = computeTopProjection(voxels);
-      expect(result.cells.length).toBe(3);
-      expect(result.width).toBe(3); // -1 到 1 = 3 格
-      expect(result.depth).toBe(3);
+      const result = getLayerSlice(voxels, 1);
+      expect(result.cells).toHaveLength(2);
+      expect(result.width).toBe(2);
+      expect(result.cells.every(c => c.type === 'brick')).toBe(true);
+    });
+
+    it('应该过滤空气方块', () => {
+      const voxels = [
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [1, 0, 0], type: 'air' },
+        { position: [2, 0, 0], type: 'stone' },
+      ];
+
+      const result = getLayerSlice(voxels, 0);
+      expect(result.cells).toHaveLength(2);
+      expect(result.cells.every(c => c.type !== 'air')).toBe(true);
+    });
+  });
+
+  describe('getBounds', () => {
+    it('应该返回零边界当数组为空', () => {
+      const result = getBounds([]);
+      expect(result).toEqual({
+        minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0,
+        width: 0, height: 0, depth: 0
+      });
+    });
+
+    it('应该正确计算边界', () => {
+      const voxels = [
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [5, 10, 3], type: 'stone' },
+        { position: [2, 5, 1], type: 'stone' },
+      ];
+
+      const result = getBounds(voxels);
+      expect(result.minX).toBe(0);
+      expect(result.maxX).toBe(5);
+      expect(result.minY).toBe(0);
+      expect(result.maxY).toBe(10);
+      expect(result.minZ).toBe(0);
+      expect(result.maxZ).toBe(3);
+      expect(result.width).toBe(6);
+      expect(result.height).toBe(11);
+      expect(result.depth).toBe(4);
+    });
+
+    it('应该过滤空气方块', () => {
+      const voxels = [
+        { position: [0, 0, 0], type: 'stone' },
+        { position: [100, 100, 100], type: 'air' },
+        { position: [2, 2, 2], type: 'stone' },
+      ];
+
+      const result = getBounds(voxels);
+      expect(result.maxX).toBe(2); // 不应该包含 air 的 100
+      expect(result.maxY).toBe(2);
+      expect(result.maxZ).toBe(2);
     });
   });
 });

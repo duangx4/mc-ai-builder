@@ -1,27 +1,38 @@
 /**
- * 投影计算工具 - 纯函数模块
- * 支持三视图投影（俯视/正视/侧视）+ 层切片
+ * projection.js - 体素投影计算工具（纯函数）
+ *
+ * 提供三视图投影（俯视/正视/侧视）和层切片功能
  */
 
 /**
- * 计算体素的三维包围盒
- * @param {Array<{position: [x,y,z], type: string}>} voxels - 体素数组
- * @returns {{minX, maxX, minY, maxY, minZ, maxZ, width, height, depth}}
+ * 计算体素数组的投影
+ * @param {Array} voxels - 体素数组 [{ position: [x, y, z], type: string }]
+ * @param {string} direction - 投影方向 'top' | 'front' | 'side'
+ * @returns {Object} { cells: Array<{x, y, type}>, width, depth, height }
  */
-function getBounds(voxels) {
+export function computeProjection(voxels, direction) {
+  // 空数组处理
   if (!voxels || voxels.length === 0) {
-    return { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0, width: 0, height: 0, depth: 0 };
+    return { cells: [], width: 0, depth: 0, height: 0 };
   }
 
+  // 过滤空气方块和无效数据
+  const validVoxels = voxels.filter(v =>
+    v && v.position && Array.isArray(v.position) && v.position.length >= 3 &&
+    v.type && v.type.toLowerCase() !== 'air'
+  );
+
+  if (validVoxels.length === 0) {
+    return { cells: [], width: 0, depth: 0, height: 0 };
+  }
+
+  // 计算边界
   let minX = Infinity, maxX = -Infinity;
   let minY = Infinity, maxY = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
 
-  voxels.forEach(v => {
-    if (!v.position || v.position.length < 3) return;
+  validVoxels.forEach(v => {
     const [x, y, z] = v.position;
-    if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') return;
-    
     minX = Math.min(minX, x);
     maxX = Math.max(maxX, x);
     minY = Math.min(minY, y);
@@ -30,10 +41,160 @@ function getBounds(voxels) {
     maxZ = Math.max(maxZ, z);
   });
 
-  // 边界处理：如果没有有效体素
-  if (minX === Infinity) {
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  const depth = maxZ - minZ + 1;
+
+  // 根据方向计算投影
+  switch (direction) {
+    case 'top': {
+      // 俯视图：沿 Y 轴压缩，每 (x, z) 取最高方块
+      const grid = new Map();
+      validVoxels.forEach(v => {
+        const [x, y, z] = v.position;
+        const key = `${x},${z}`;
+        const existing = grid.get(key);
+        if (!existing || y > existing.y) {
+          grid.set(key, { x, z, y, type: v.type });
+        }
+      });
+
+      // 转换为 cells 数组
+      const cells = Array.from(grid.values()).map(({ x, z, type }) => ({
+        x: x - minX,
+        y: z - minZ,
+        type
+      }));
+
+      return { cells, width, depth, height };
+    }
+
+    case 'front': {
+      // 正视图：从南侧看（沿 Z 轴压缩），每 (x, y) 取最前方块（z 最大）
+      const grid = new Map();
+      validVoxels.forEach(v => {
+        const [x, y, z] = v.position;
+        const key = `${x},${y}`;
+        const existing = grid.get(key);
+        if (!existing || z > existing.z) {
+          grid.set(key, { x, y, z, type: v.type });
+        }
+      });
+
+      const cells = Array.from(grid.values()).map(({ x, y, type }) => ({
+        x: x - minX,
+        y: y - minY,
+        type
+      }));
+
+      return { cells, width, depth: height, height: depth };
+    }
+
+    case 'side': {
+      // 侧视图：从东侧看（沿 X 轴压缩），每 (z, y) 取最右方块（x 最大）
+      const grid = new Map();
+      validVoxels.forEach(v => {
+        const [x, y, z] = v.position;
+        const key = `${z},${y}`;
+        const existing = grid.get(key);
+        if (!existing || x > existing.x) {
+          grid.set(key, { x, y, z, type: v.type });
+        }
+      });
+
+      const cells = Array.from(grid.values()).map(({ z, y, type }) => ({
+        x: z - minZ,
+        y: y - minY,
+        type
+      }));
+
+      return { cells, width: depth, depth: height, height: width };
+    }
+
+    default:
+      throw new Error(`Unknown projection direction: ${direction}`);
+  }
+}
+
+/**
+ * 获取指定高度层的切片（俯视图）
+ * @param {Array} voxels - 体素数组
+ * @param {number} y - Y 坐标（绝对坐标）
+ * @returns {Object} { cells: Array<{x, y, type}>, width, depth }
+ */
+export function getLayerSlice(voxels, y) {
+  if (!voxels || voxels.length === 0) {
+    return { cells: [], width: 0, depth: 0 };
+  }
+
+  // 过滤空气方块和指定层的方块
+  const layerVoxels = voxels.filter(v =>
+    v && v.position && Array.isArray(v.position) && v.position.length >= 3 &&
+    v.type && v.type.toLowerCase() !== 'air' &&
+    v.position[1] === y
+  );
+
+  if (layerVoxels.length === 0) {
+    return { cells: [], width: 0, depth: 0 };
+  }
+
+  // 计算边界
+  let minX = Infinity, maxX = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+
+  layerVoxels.forEach(v => {
+    const [x, , z] = v.position;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  });
+
+  const width = maxX - minX + 1;
+  const depth = maxZ - minZ + 1;
+
+  // 构建 cells
+  const cells = layerVoxels.map(v => ({
+    x: v.position[0] - minX,
+    y: v.position[2] - minZ,
+    type: v.type
+  }));
+
+  return { cells, width, depth };
+}
+
+/**
+ * 计算体素数组的边界信息
+ * @param {Array} voxels - 体素数组
+ * @returns {Object} { minX, maxX, minY, maxY, minZ, maxZ, width, height, depth }
+ */
+export function getBounds(voxels) {
+  if (!voxels || voxels.length === 0) {
     return { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0, width: 0, height: 0, depth: 0 };
   }
+
+  const validVoxels = voxels.filter(v =>
+    v && v.position && Array.isArray(v.position) && v.position.length >= 3 &&
+    v.type && v.type.toLowerCase() !== 'air'
+  );
+
+  if (validVoxels.length === 0) {
+    return { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0, width: 0, height: 0, depth: 0 };
+  }
+
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+
+  validVoxels.forEach(v => {
+    const [x, y, z] = v.position;
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  });
 
   return {
     minX, maxX, minY, maxY, minZ, maxZ,
@@ -41,162 +202,4 @@ function getBounds(voxels) {
     height: maxY - minY + 1,
     depth: maxZ - minZ + 1
   };
-}
-
-/**
- * 计算俯视图投影（TOP - 沿 Y 轴压缩）
- * 每个 (x,z) 位置取最高（y 最大）的方块
- * @param {Array<{position: [x,y,z], type: string}>} voxels
- * @returns {{cells: Array<{x, z, y, type}>, width, depth, height}}
- */
-export function computeTopProjection(voxels) {
-  if (!voxels || voxels.length === 0) {
-    return { cells: [], width: 0, depth: 0, height: 0 };
-  }
-
-  const bounds = getBounds(voxels);
-  const grid = new Map(); // key: "x,z" -> {type, y}
-
-  // 遍历所有体素，每个 (x,z) 位置保留 y 最大的方块
-  voxels.forEach(v => {
-    if (!v.position || v.position.length < 3 || v.type === 'AIR') return;
-    const [x, y, z] = v.position;
-    if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') return;
-
-    const key = `${x},${z}`;
-    const existing = grid.get(key);
-    if (!existing || y > existing.y) {
-      grid.set(key, { type: v.type, y, x, z });
-    }
-  });
-
-  // 转换为数组
-  const cells = Array.from(grid.values());
-
-  return {
-    cells,
-    width: bounds.width,
-    depth: bounds.depth,
-    height: bounds.height
-  };
-}
-
-/**
- * 计算正视图投影（FRONT - 沿 Z 轴压缩，从南侧看）
- * 每个 (x,y) 位置取 z 最大的方块（最靠近观察者）
- * @param {Array<{position: [x,y,z], type: string}>} voxels
- * @returns {{cells: Array<{x, y, z, type}>, width, height, depth}}
- */
-export function computeFrontProjection(voxels) {
-  if (!voxels || voxels.length === 0) {
-    return { cells: [], width: 0, height: 0, depth: 0 };
-  }
-
-  const bounds = getBounds(voxels);
-  const grid = new Map(); // key: "x,y" -> {type, z}
-
-  voxels.forEach(v => {
-    if (!v.position || v.position.length < 3 || v.type === 'AIR') return;
-    const [x, y, z] = v.position;
-    if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') return;
-
-    const key = `${x},${y}`;
-    const existing = grid.get(key);
-    if (!existing || z > existing.z) {
-      grid.set(key, { type: v.type, z, x, y });
-    }
-  });
-
-  const cells = Array.from(grid.values());
-
-  return {
-    cells,
-    width: bounds.width,
-    height: bounds.height,
-    depth: bounds.depth
-  };
-}
-
-/**
- * 计算侧视图投影（SIDE - 沿 X 轴压缩，从东侧看）
- * 每个 (z,y) 位置取 x 最大的方块（最靠右）
- * @param {Array<{position: [x,y,z], type: string}>} voxels
- * @returns {{cells: Array<{x, y, z, type}>, width, height, depth}}
- */
-export function computeSideProjection(voxels) {
-  if (!voxels || voxels.length === 0) {
-    return { cells: [], width: 0, height: 0, depth: 0 };
-  }
-
-  const bounds = getBounds(voxels);
-  const grid = new Map(); // key: "z,y" -> {type, x}
-
-  voxels.forEach(v => {
-    if (!v.position || v.position.length < 3 || v.type === 'AIR') return;
-    const [x, y, z] = v.position;
-    if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') return;
-
-    const key = `${z},${y}`;
-    const existing = grid.get(key);
-    if (!existing || x > existing.x) {
-      grid.set(key, { type: v.type, x, z, y });
-    }
-  });
-
-  const cells = Array.from(grid.values());
-
-  return {
-    cells,
-    width: bounds.width,
-    height: bounds.height,
-    depth: bounds.depth
-  };
-}
-
-/**
- * 获取指定 Y 层的切片（用于俯视图层滑块）
- * @param {Array<{position: [x,y,z], type: string}>} voxels
- * @param {number} targetY - 目标层高度
- * @returns {{cells: Array<{x, z, type}>, width, depth}}
- */
-export function getLayerSlice(voxels, targetY) {
-  if (!voxels || voxels.length === 0) {
-    return { cells: [], width: 0, depth: 0 };
-  }
-
-  const bounds = getBounds(voxels);
-  const cells = [];
-
-  voxels.forEach(v => {
-    if (!v.position || v.position.length < 3 || v.type === 'AIR') return;
-    const [x, y, z] = v.position;
-    if (y === targetY) {
-      cells.push({ x, z, type: v.type });
-    }
-  });
-
-  return {
-    cells,
-    width: bounds.width,
-    depth: bounds.depth
-  };
-}
-
-/**
- * 统一投影计算接口
- * @param {Array} voxels
- * @param {'top'|'front'|'side'} direction
- * @returns {{cells: Array, width: number, height: number, depth: number}}
- */
-export function computeProjection(voxels, direction) {
-  switch (direction) {
-    case 'top':
-      return computeTopProjection(voxels);
-    case 'front':
-      return computeFrontProjection(voxels);
-    case 'side':
-      return computeSideProjection(voxels);
-    default:
-      throw new Error(`Unknown projection direction: ${direction}`);
-  }
 }

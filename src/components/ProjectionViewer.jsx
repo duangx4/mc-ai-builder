@@ -1,323 +1,253 @@
 /**
- * 投影查看器组件 - 2D 三视图 + 层切片
- * 使用 Canvas 2D 绘制俯视/正视/侧视三个投影
+ * ProjectionViewer.jsx - 2D 投影查看器（三视图 + 层切片）
+ *
+ * 显示建筑的俯视/正视/侧视三视图，支持层切片查看
  */
-import React, { useEffect, useRef, useState } from 'react';
-import { computeTopProjection, computeFrontProjection, computeSideProjection, getLayerSlice } from '../utils/projection';
-import { FALLBACK_COLORS } from '../utils/textureMapping';
-import useStore from '../store/useStore';
 
-const ProjectionViewer = () => {
-  const { semanticVoxels } = useStore();
-  const [selectedLayer, setSelectedLayer] = useState(0);
-  const [showLayerSlice, setShowLayerSlice] = useState(false);
-  
-  const topCanvasRef = useRef(null);
-  const frontCanvasRef = useRef(null);
-  const sideCanvasRef = useRef(null);
-  const layerCanvasRef = useRef(null);
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { computeProjection, getLayerSlice, getBounds } from '../utils/projection.js';
+import { FALLBACK_COLORS } from '../utils/textureMapping.js';
 
-  // 计算投影数据
-  const topProjection = computeTopProjection(semanticVoxels);
-  const frontProjection = computeFrontProjection(semanticVoxels);
-  const sideProjection = computeSideProjection(semanticVoxels);
-  
-  const maxLayer = topProjection.height > 0 ? topProjection.height - 1 : 0;
-  
-  // 初始化选中最高层
+/**
+ * 单个投影视图渲染器
+ */
+function ProjectionCanvas({ projection, title, axisLabels, cellSize = 20 }) {
+  const canvasRef = useRef(null);
+
   useEffect(() => {
-    setSelectedLayer(maxLayer);
-  }, [maxLayer]);
-
-  // 获取方块颜色
-  const getBlockColor = (type) => {
-    return FALLBACK_COLORS[type?.toLowerCase()] || FALLBACK_COLORS['default'] || '#888888';
-  };
-
-  // 绘制投影到 Canvas
-  const drawProjection = (canvas, projection, mode) => {
+    const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
-    const cellSize = 20;
-    
-    let gridWidth, gridHeight;
-    
-    if (mode === 'top') {
-      gridWidth = projection.width;
-      gridHeight = projection.depth;
-    } else if (mode === 'front') {
-      gridWidth = projection.width;
-      gridHeight = projection.height;
-    } else {
-      gridWidth = projection.depth;
-      gridHeight = projection.height;
-    }
-    
-    const canvasWidth = Math.max(gridWidth * cellSize, 100);
-    const canvasHeight = Math.max(gridHeight * cellSize, 100);
-    
+    const { cells, width, depth } = projection;
+
+    // 计算画布尺寸（包含边距）
+    const padding = 30;
+    const canvasWidth = width * cellSize + padding * 2;
+    const canvasHeight = depth * cellSize + padding * 2;
+
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
-    
+
+    // 清空画布（暗色背景）
     ctx.fillStyle = '#0f1219';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    
+
+    // 绘制网格线
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1;
-    
-    for (let i = 0; i <= gridWidth; i++) {
+
+    for (let x = 0; x <= width; x++) {
       ctx.beginPath();
-      ctx.moveTo(i * cellSize, 0);
-      ctx.lineTo(i * cellSize, gridHeight * cellSize);
+      ctx.moveTo(padding + x * cellSize, padding);
+      ctx.lineTo(padding + x * cellSize, padding + depth * cellSize);
       ctx.stroke();
     }
-    
-    for (let j = 0; j <= gridHeight; j++) {
+
+    for (let y = 0; y <= depth; y++) {
       ctx.beginPath();
-      ctx.moveTo(0, j * cellSize);
-      ctx.lineTo(gridWidth * cellSize, j * cellSize);
+      ctx.moveTo(padding, padding + y * cellSize);
+      ctx.lineTo(padding + width * cellSize, padding + y * cellSize);
       ctx.stroke();
     }
-    
-    const bounds = getBoundsFromVoxels(semanticVoxels);
-    
-    projection.cells.forEach(cell => {
-      let canvasX, canvasY;
-      
-      if (mode === 'top') {
-        canvasX = (cell.x - bounds.minX) * cellSize;
-        canvasY = (cell.z - bounds.minZ) * cellSize;
-      } else if (mode === 'front') {
-        canvasX = (cell.x - bounds.minX) * cellSize;
-        canvasY = (bounds.maxY - cell.y) * cellSize;
-      } else {
-        canvasX = (cell.z - bounds.minZ) * cellSize;
-        canvasY = (bounds.maxY - cell.y) * cellSize;
-      }
-      
-      ctx.fillStyle = getBlockColor(cell.type);
-      ctx.fillRect(canvasX, canvasY, cellSize, cellSize);
-      
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(canvasX, canvasY, cellSize, cellSize);
+
+    // 绘制方块
+    cells.forEach(cell => {
+      const x = padding + cell.x * cellSize;
+      const y = padding + cell.y * cellSize;
+      const color = FALLBACK_COLORS[cell.type] || '#c8c8c8';
+
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, cellSize, cellSize);
+
+      // 方块边框
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.strokeRect(x, y, cellSize, cellSize);
     });
-  };
 
-  const drawLayerSlice = (canvas, layer) => {
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    const cellSize = 20;
-    
-    const sliceData = getLayerSlice(semanticVoxels, layer);
-    const gridWidth = sliceData.width || 1;
-    const gridHeight = sliceData.depth || 1;
-    
-    const canvasWidth = Math.max(gridWidth * cellSize, 100);
-    const canvasHeight = Math.max(gridHeight * cellSize, 100);
-    
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    
-    ctx.fillStyle = '#0f1219';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.lineWidth = 1;
-    
-    for (let i = 0; i <= gridWidth; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * cellSize, 0);
-      ctx.lineTo(i * cellSize, gridHeight * cellSize);
-      ctx.stroke();
-    }
-    
-    for (let j = 0; j <= gridHeight; j++) {
-      ctx.beginPath();
-      ctx.moveTo(0, j * cellSize);
-      ctx.lineTo(gridWidth * cellSize, j * cellSize);
-      ctx.stroke();
-    }
-    
-    const bounds = getBoundsFromVoxels(semanticVoxels);
-    
-    sliceData.cells.forEach(cell => {
-      const canvasX = (cell.x - bounds.minX) * cellSize;
-      const canvasY = (cell.z - bounds.minZ) * cellSize;
-      
-      ctx.fillStyle = getBlockColor(cell.type);
-      ctx.fillRect(canvasX, canvasY, cellSize, cellSize);
-      
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(canvasX, canvasY, cellSize, cellSize);
-    });
-  };
+    // 绘制坐标轴标签
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-  const getBoundsFromVoxels = (voxels) => {
-    if (!voxels || voxels.length === 0) {
-      return { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
-    }
-    
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    let minZ = Infinity, maxZ = -Infinity;
-    
-    voxels.forEach(v => {
-      if (!v.position || v.position.length < 3) return;
-      const [x, y, z] = v.position;
-      if (typeof x !== 'number' || typeof y !== 'number' || typeof z !== 'number') return;
-      
-      minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x);
-      minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y);
-      minZ = Math.min(minZ, z);
-      maxZ = Math.max(maxZ, z);
-    });
-    
-    if (minX === Infinity) {
-      return { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 };
-    }
-    
-    return { minX, maxX, minY, maxY, minZ, maxZ };
-  };
+    // X 轴标签
+    ctx.fillText(axisLabels.x, canvasWidth / 2, padding - 15);
 
-  useEffect(() => {
-    drawProjection(topCanvasRef.current, topProjection, 'top');
-    drawProjection(frontCanvasRef.current, frontProjection, 'front');
-    drawProjection(sideCanvasRef.current, sideProjection, 'side');
-  }, [semanticVoxels]);
+    // Y 轴标签
+    ctx.save();
+    ctx.translate(padding - 15, canvasHeight / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(axisLabels.y, 0, 0);
+    ctx.restore();
 
-  useEffect(() => {
-    if (showLayerSlice && layerCanvasRef.current) {
-      drawLayerSlice(layerCanvasRef.current, selectedLayer);
-    }
-  }, [selectedLayer, showLayerSlice, semanticVoxels]);
+  }, [projection, cellSize, axisLabels]);
 
-  if (!semanticVoxels || semanticVoxels.length === 0) {
+  if (!projection || projection.cells.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-400">
-        <div className="text-center">
-          <p className="text-lg">暂无方块数据</p>
-          <p className="text-sm mt-2">请先生成建筑</p>
+      <div className="flex items-center justify-center bg-neutral-900/50 rounded-lg border border-neutral-700 p-8">
+        <p className="text-neutral-500 text-sm">无数据</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center">
+      <h3 className="text-sm font-medium text-neutral-300 mb-2">{title}</h3>
+      <canvas
+        ref={canvasRef}
+        className="bg-neutral-900/50 rounded-lg border border-neutral-700"
+      />
+      <p className="text-xs text-neutral-500 mt-2">
+        {projection.width} × {projection.depth}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * 主投影查看器组件
+ */
+export default function ProjectionViewer({ blocks, onClose }) {
+  const [layerIndex, setLayerIndex] = useState(null);
+
+  // 计算边界信息
+  const bounds = useMemo(() => getBounds(blocks), [blocks]);
+
+  // 计算三视图
+  const topProjection = useMemo(() => computeProjection(blocks, 'top'), [blocks]);
+  const frontProjection = useMemo(() => computeProjection(blocks, 'front'), [blocks]);
+  const sideProjection = useMemo(() => computeProjection(blocks, 'side'), [blocks]);
+
+  // 初始化层切片索引（默认最高层）
+  useEffect(() => {
+    if (bounds.height > 0 && layerIndex === null) {
+      setLayerIndex(bounds.maxY);
+    }
+  }, [bounds.height, bounds.maxY, layerIndex]);
+
+  // 计算当前层切片
+  const layerSlice = useMemo(() => {
+    if (layerIndex === null) return { cells: [], width: 0, depth: 0 };
+    return getLayerSlice(blocks, layerIndex);
+  }, [blocks, layerIndex]);
+
+  // 统计信息
+  const blockCount = blocks.filter(b =>
+    b && b.type && b.type.toLowerCase() !== 'air'
+  ).length;
+
+  if (!blocks || blocks.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="bg-neutral-900 rounded-xl border border-neutral-700 p-8 max-w-4xl">
+          <p className="text-neutral-400 text-center">无可视化数据</p>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg"
+          >
+            关闭
+          </button>
         </div>
       </div>
     );
   }
 
-  const totalBlocks = semanticVoxels.filter(v => v.type !== 'AIR').length;
-
   return (
-    <div className="h-full overflow-auto p-6 bg-neutral-950">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">📐 投影查看器</h2>
-        <div className="flex gap-4 text-sm text-gray-400">
-          <span>方块数: <span className="text-orange-400 font-medium">{totalBlocks}</span></span>
-          <span>尺寸: <span className="text-orange-400 font-medium">
-            {topProjection.width}×{topProjection.depth}×{topProjection.height}
-          </span></span>
-          <span>最高层: <span className="text-orange-400 font-medium">Y={maxLayer}</span></span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="bg-neutral-900/50 rounded-lg p-4 border border-neutral-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <span className="text-blue-400">↓</span> 俯视图 (TOP)
-            </h3>
-            <span className="text-xs text-gray-500">X×Z 平面</span>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-auto">
+      <div className="bg-neutral-900 rounded-xl border border-neutral-700 p-6 max-w-7xl w-full max-h-[90vh] overflow-y-auto">
+        {/* 标题栏 */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-white">📐 投影查看器</h2>
+            <p className="text-sm text-neutral-400 mt-1">
+              三视图 · {blockCount} 个方块 · {bounds.width}×{bounds.height}×{bounds.depth}
+            </p>
           </div>
-          <div className="overflow-auto max-h-96 bg-neutral-950 rounded border border-neutral-800">
-            <canvas ref={topCanvasRef} className="block" />
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            沿 Y 轴压缩，显示每列最高方块
-          </div>
-        </div>
-
-        <div className="bg-neutral-900/50 rounded-lg p-4 border border-neutral-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <span className="text-green-400">→</span> 正视图 (FRONT)
-            </h3>
-            <span className="text-xs text-gray-500">X×Y 平面</span>
-          </div>
-          <div className="overflow-auto max-h-96 bg-neutral-950 rounded border border-neutral-800">
-            <canvas ref={frontCanvasRef} className="block" />
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            从南侧观察，沿 Z 轴压缩
-          </div>
-        </div>
-
-        <div className="bg-neutral-900/50 rounded-lg p-4 border border-neutral-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-semibold flex items-center gap-2">
-              <span className="text-purple-400">←</span> 侧视图 (SIDE)
-            </h3>
-            <span className="text-xs text-gray-500">Z×Y 平面</span>
-          </div>
-          <div className="overflow-auto max-h-96 bg-neutral-950 rounded border border-neutral-800">
-            <canvas ref={sideCanvasRef} className="block" />
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            从东侧观察，沿 X 轴压缩
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-neutral-900/50 rounded-lg p-4 border border-neutral-800">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-white font-semibold flex items-center gap-2">
-            <span className="text-orange-400">✂️</span> 层切片
-          </h3>
           <button
-            onClick={() => setShowLayerSlice(!showLayerSlice)}
-            className="px-3 py-1 text-xs bg-neutral-800 hover:bg-neutral-700 text-white rounded transition"
+            onClick={onClose}
+            className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg transition-colors"
           >
-            {showLayerSlice ? '隐藏' : '显示'}
+            关闭
           </button>
         </div>
 
-        {showLayerSlice && (
-          <>
-            <div className="mb-4">
-              <div className="flex items-center gap-4">
-                <label className="text-sm text-gray-400 whitespace-nowrap">
-                  Y = {selectedLayer}
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max={maxLayer}
-                  value={selectedLayer}
-                  onChange={(e) => setSelectedLayer(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer"
-                  style={{
-                    accentColor: '#f97316'
-                  }}
-                />
-                <span className="text-xs text-gray-500">
-                  0 - {maxLayer}
-                </span>
-              </div>
+        {/* 三视图 */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <ProjectionCanvas
+            projection={topProjection}
+            title="俯视图 (Top)"
+            axisLabels={{ x: 'X 轴', y: 'Z 轴' }}
+          />
+          <ProjectionCanvas
+            projection={frontProjection}
+            title="正视图 (Front)"
+            axisLabels={{ x: 'X 轴', y: 'Y 轴' }}
+          />
+          <ProjectionCanvas
+            projection={sideProjection}
+            title="侧视图 (Side)"
+            axisLabels={{ x: 'Z 轴', y: 'Y 轴' }}
+          />
+        </div>
+
+        {/* 层切片控制 */}
+        {bounds.height > 0 && (
+          <div className="border-t border-neutral-700 pt-6">
+            <h3 className="text-sm font-medium text-neutral-300 mb-4">
+              层切片查看 (Y = {layerIndex})
+            </h3>
+
+            <div className="flex items-center gap-4 mb-4">
+              <label className="text-xs text-neutral-400">高度层:</label>
+              <input
+                type="range"
+                min={bounds.minY}
+                max={bounds.maxY}
+                value={layerIndex ?? bounds.maxY}
+                onChange={(e) => setLayerIndex(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-neutral-700 rounded-lg appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${((layerIndex - bounds.minY) / (bounds.maxY - bounds.minY)) * 100}%, #374151 ${((layerIndex - bounds.minY) / (bounds.maxY - bounds.minY)) * 100}%, #374151 100%)`
+                }}
+              />
+              <span className="text-sm font-mono text-neutral-300 min-w-[3rem] text-right">
+                {layerIndex}
+              </span>
             </div>
 
-            <div className="overflow-auto max-h-96 bg-neutral-950 rounded border border-neutral-800">
-              <canvas ref={layerCanvasRef} className="block" />
-            </div>
-            <div className="mt-2 text-xs text-gray-500">
-              显示第 {selectedLayer} 层的所有方块（俯视平面）
-            </div>
-          </>
+            {/* 层切片视图 */}
+            <ProjectionCanvas
+              projection={layerSlice}
+              title={`第 ${layerIndex} 层`}
+              axisLabels={{ x: 'X 轴', y: 'Z 轴' }}
+              cellSize={24}
+            />
+          </div>
         )}
+
+        {/* 统计信息 */}
+        <div className="border-t border-neutral-700 pt-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm">
+            <div>
+              <p className="text-neutral-400">总方块数</p>
+              <p className="text-white font-semibold text-lg">{blockCount}</p>
+            </div>
+            <div>
+              <p className="text-neutral-400">宽度 (X)</p>
+              <p className="text-white font-semibold text-lg">{bounds.width}</p>
+            </div>
+            <div>
+              <p className="text-neutral-400">高度 (Y)</p>
+              <p className="text-white font-semibold text-lg">{bounds.height}</p>
+            </div>
+            <div>
+              <p className="text-neutral-400">深度 (Z)</p>
+              <p className="text-white font-semibold text-lg">{bounds.depth}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
-};
-
-export default ProjectionViewer;
+}

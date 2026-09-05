@@ -4112,6 +4112,18 @@ ${finalCode}
             <Plane size={14} />
             <span className="hidden sm:inline">{t('game')}</span>
           </button>
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsProjectionOpen(true);
+            }}
+            className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border text-xs font-bold transition-all shadow-lg bg-neutral-900/80 border-white/10 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+            title="查看 2D 投影和三视图"
+          >
+            <Ruler size={14} />
+            <span className="hidden sm:inline">投影</span>
+          </button>
         </div >
 
         <PropertiesPanel />
@@ -4342,18 +4354,10 @@ ${finalCode}
 
       {/* Projection Viewer Modal - 2D three-view projections */}
       {isProjectionOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full h-full max-w-[95vw] max-h-[95vh] bg-neutral-900 rounded-lg shadow-2xl border border-neutral-700 overflow-hidden">
-            <button
-              onClick={() => setIsProjectionOpen(false)}
-              className="absolute top-4 right-4 z-10 p-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition"
-              title="关闭"
-            >
-              <X size={20} className="text-white" />
-            </button>
-            <ProjectionViewer />
-          </div>
-        </div>
+        <ProjectionViewer
+          blocks={blocks}
+          onClose={() => setIsProjectionOpen(false)}
+        />
       )}
     </div >
   );
