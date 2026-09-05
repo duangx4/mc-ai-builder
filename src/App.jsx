@@ -1657,7 +1657,21 @@ ${userMessage}
         });
 
         if (effectiveMode === 'precise') {
-          // ============ PRECISE GENERATION (Two-Step with Planning) ============
+          // ============ PRECISE MODIFICATION MODE (Fast Generation with Region Context) ============
+          // 精确修改模式不需要规划阶段，因为：
+          // 1. 已有完整的建筑上下文（区域内外的方块）
+          // 2. 用户需求明确（修改特定区域）
+          // 3. 直接执行修改更快更准确
+
+          console.log('[Precise Mode] Using fast generation with region context');
+
+          // 使用快速生成模式（已包含区域约束的 enhancedPrompt）
+          effectiveMode = 'fast';
+        }
+
+        if (effectiveMode === 'precise_old') {
+          // ============ OLD PRECISE GENERATION (Two-Step with Planning) ============
+          // 此分支已废弃，保留以备将来参考
           setAgentSteps([{ id: 'init', label: 'Initializing AI Architect...', status: 'done' }]);
 
           // Dev Console: Log Precise mode start
