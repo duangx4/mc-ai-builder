@@ -164,6 +164,12 @@ export function parsePlanningResponse(response) {
 
         // Validate required fields
         if (!plan.buildingName || !plan.materials || !plan.size) {
+            console.error('[Planning Parser] Missing required fields:', {
+                hasBuildingName: !!plan.buildingName,
+                hasMaterials: !!plan.materials,
+                hasSize: !!plan.size,
+                plan
+            });
             throw new Error('Missing required fields in plan');
         }
 
@@ -194,6 +200,9 @@ export function parsePlanningResponse(response) {
         return plan;
     } catch (error) {
         console.error('[Planning] Failed to parse plan:', error);
+        console.error('[Planning] Raw response (first 500 chars):', response.substring(0, 500));
+        console.error('[Planning] Response type:', typeof response);
+        console.error('[Planning] Response length:', response?.length);
         return null;
     }
 }
