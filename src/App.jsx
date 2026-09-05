@@ -11,6 +11,7 @@ import ImageViewerModal from './components/ImageViewerModal';
 import BlockToolsPanel from './components/BlockToolsPanel';
 import VariantTabs from './components/VariantTabs';
 import ProjectionViewer from './components/ProjectionViewer';
+import UltraModeViewer from './components/UltraModeViewer';
 import { generateStructureCommand } from './utils/parser';
 import { generateOneCommand, exportToMcFunction, exportToNBTStructure, exportToWorldEdit, exportToLitematica, exportToAxiom, exportToDatapack } from './utils/exporter';
 import ImportModal from './components/ImportModal';
@@ -325,6 +326,10 @@ function App() {
   const [attachedImages, setAttachedImages] = useState([]); // User uploaded images for Vision API (max 3)
   const [viewingImage, setViewingImage] = useState(null); // Image URL for fullscreen viewer
   const [isProjectionOpen, setIsProjectionOpen] = useState(false); // Projection viewer modal
+  // Ultra mode states
+  const [isUltraModeViewerOpen, setIsUltraModeViewerOpen] = useState(false);
+  const [ultraModeResult, setUltraModeResult] = useState(null);
+  const [isUltraModeRunning, setIsUltraModeRunning] = useState(false);
   // Region selection states
   const [isRegionSelecting, setIsRegionSelecting] = useState(false);
   const [regionBounds, setRegionBounds] = useState(null);
@@ -4357,6 +4362,18 @@ ${finalCode}
         <ProjectionViewer
           blocks={blocks}
           onClose={() => setIsProjectionOpen(false)}
+        />
+      )}
+
+      {/* Ultra Mode Viewer - AI vision feedback iterations */}
+      {isUltraModeViewerOpen && (
+        <UltraModeViewer
+          result={ultraModeResult}
+          isRunning={isUltraModeRunning}
+          onClose={() => {
+            setIsUltraModeViewerOpen(false);
+            setUltraModeResult(null);
+          }}
         />
       )}
     </div >
