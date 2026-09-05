@@ -551,18 +551,44 @@ function App() {
     setBlueprintRequirements(requirements);
     setIsProcessing(true);
 
-    try {
-      // 生成蓝图
-      showToast('正在生成蓝图...', 'info');
+    // 添加状态消息到聊天框
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: `建造 ${requirements.buildingType}（${requirements.buildingStyle} 风格）` },
+      { role: 'system', content: '📐 正在生成蓝图，请稍候...' }
+    ]);
 
+    try {
       const { generateBlueprintWithAI } = await import('./utils/blueprintEngine');
       const blueprint = await generateBlueprintWithAI(requirements, apiSettings);
 
       setBlueprintData(blueprint);
       setIsBlueprintViewerOpen(true);
+
+      // 更新状态消息
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'system',
+          content: '✅ 蓝图生成完成！请审批后开始建造。'
+        };
+        return updated;
+      });
+
       showToast('蓝图生成完成', 'success');
     } catch (error) {
       console.error('蓝图生成失败:', error);
+
+      // 更新错误消息
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'system',
+          content: `❌ 蓝图生成失败: ${error.message}`
+        };
+        return updated;
+      });
+
       showToast(`蓝图生成失败: ${error.message}`, 'error');
     } finally {
       setIsProcessing(false);
@@ -573,17 +599,40 @@ function App() {
     setIsBlueprintViewerOpen(false);
     setIsProcessing(true);
 
-    try {
-      showToast('开始建造...', 'info');
+    // 添加建造开始消息
+    setMessages(prev => [
+      ...prev,
+      { role: 'system', content: '🏗️ 正在生成建造代码，请稍候...' }
+    ]);
 
+    try {
       const { generateBuildCodeFromBlueprint } = await import('./utils/blueprintEngine');
       const result = await generateBuildCodeFromBlueprint(
         blueprintData,
         apiSettings,
         ({ phase, message, progress }) => {
           console.log(`[Blueprint Build] ${phase}: ${message} (${progress}%)`);
+          // 更新进度消息
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              role: 'system',
+              content: `🏗️ ${message} (${progress}%)`
+            };
+            return updated;
+          });
         }
       );
+
+      // 更新为执行代码状态
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'system',
+          content: '⚙️ 正在执行建造代码...'
+        };
+        return updated;
+      });
 
       // 执行生成的代码
       const { executeVoxelCode } = await import('./utils/sandbox');
@@ -593,17 +642,17 @@ function App() {
         useStore.getState().setBlocks(buildResult.blocks);
         useStore.getState().setSemanticVoxels(buildResult.semanticVoxels || []);
 
-        // 添加到对话历史
-        setMessages(prev => [
-          ...prev,
-          { role: 'user', content: `建造 ${blueprintData.metadata.buildingType}（${blueprintData.metadata.style} 风格）` },
-          {
+        // 更新为完成消息
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
             role: 'ai',
-            content: `已完成建造！\n\n**建筑信息**：\n- 类型: ${blueprintData.metadata.buildingType}\n- 风格: ${blueprintData.metadata.style}\n- 尺寸: ${blueprintData.metadata.size.width}×${blueprintData.metadata.size.depth}×${blueprintData.metadata.size.height}\n- 方块数: ${buildResult.blocks.length}`,
+            content: `✅ 建造完成！\n\n**建筑信息**：\n- 类型: ${blueprintData.metadata.buildingType}\n- 风格: ${blueprintData.metadata.style}\n- 尺寸: ${blueprintData.metadata.size.width}×${blueprintData.metadata.size.depth}×${blueprintData.metadata.size.height}\n- 方块数: ${buildResult.blocks.length}`,
             hasScript: true,
             generationMode: 'workflow'
-          }
-        ]);
+          };
+          return updated;
+        });
 
         showToast('建造完成！', 'success');
       } else {
@@ -611,6 +660,17 @@ function App() {
       }
     } catch (error) {
       console.error('建造失败:', error);
+
+      // 更新为错误消息
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'system',
+          content: `❌ 建造失败: ${error.message}`
+        };
+        return updated;
+      });
+
       showToast(`建造失败: ${error.message}`, 'error');
     } finally {
       setIsProcessing(false);

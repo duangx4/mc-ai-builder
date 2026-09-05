@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useStore from '../store/useStore';
+import SVGFloorPlan from './SVGFloorPlan';
 
 /**
  * BlueprintViewer - 蓝图展示和审批组件
@@ -95,21 +96,7 @@ export default function BlueprintViewer({ blueprint, onApprove, onModify, onCanc
             <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
               <span>🗺️</span> 平面图（俯视图）
             </h3>
-            <div className="bg-black rounded-lg p-4 overflow-x-auto">
-              <pre className="text-cyan-300 font-mono text-sm leading-relaxed whitespace-pre">
-                {floorPlan?.ascii}
-              </pre>
-            </div>
-            {floorPlan?.legend && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2">
-                {Object.entries(floorPlan.legend).map(([symbol, meaning]) => (
-                  <div key={symbol} className="flex items-center gap-2 text-sm">
-                    <code className="bg-black text-cyan-300 px-2 py-1 rounded font-mono">{symbol}</code>
-                    <span className="text-gray-300">{meaning}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <SVGFloorPlan blueprint={blueprint} />
           </div>
 
           {/* 施工计划 */}

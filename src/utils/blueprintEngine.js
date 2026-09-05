@@ -108,7 +108,7 @@ export async function generateBlueprintWithAI(requirements, settings) {
 请返回标准 JSON 格式的蓝图。`;
 
   try {
-    const response = await fetchAIResponse(
+    const result = await fetchAIResponse(
       prompt,
       settings.apiKey,
       settings.baseUrl || 'https://api.openai.com/v1',
@@ -120,6 +120,8 @@ export async function generateBlueprintWithAI(requirements, settings) {
       null, // apiHistory
       settings // settings
     );
+
+    const response = result.content || result; // 兼容不同返回格式
 
     let blueprint;
     try {
@@ -196,7 +198,7 @@ ${requirements.specialFeatures?.join('、') || '无'}
   }
 
   try {
-    const response = await fetchAIResponse(
+    const result = await fetchAIResponse(
       prompt,
       settings.apiKey,
       settings.baseUrl || 'https://api.openai.com/v1',
@@ -209,15 +211,19 @@ ${requirements.specialFeatures?.join('、') || '无'}
       settings // settings
     );
 
+    const response = result.content || result; // 兼容不同返回格式
+
     if (onProgress) {
       onProgress({ phase: 'build', message: '建造代码生成完成', progress: 100 });
     }
 
     // 提取代码（如果 AI 返回了代码块）
     let code = response;
-    const codeMatch = response.match(/```(?:javascript|js)?\n([\s\S]+?)\n```/);
-    if (codeMatch) {
-      code = codeMatch[1];
+    if (typeof response === 'string') {
+      const codeMatch = response.match(/```(?:javascript|js)?\n([\s\S]+?)\n```/);
+      if (codeMatch) {
+        code = codeMatch[1];
+      }
     }
 
     return {
