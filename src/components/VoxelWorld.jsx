@@ -1524,9 +1524,10 @@ export default function VoxelWorld({ version = '1.20.1' }) {
     }, [selectedBlockIds, blocks.length]); // 只依赖 blocks.length，避免因数组引用变化导致无限循环
 
     // Use a state to force re-render when selection changes (to fix the ref delay)
-    const [, forceUpdate] = useState({});
+    // 🔧 FIX: 使用递增数字代替新对象，避免无限循环
+    const [updateTrigger, setUpdateTrigger] = useState(0);
     useEffect(() => {
-        forceUpdate({});
+        setUpdateTrigger(prev => prev + 1);
     }, [selectedBlockIds]);
 
     // Sync gizmo anchor position only when NOT dragging
