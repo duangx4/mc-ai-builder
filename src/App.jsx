@@ -709,6 +709,12 @@ function App() {
 
       console.log(`[Variant ${variantIndex}] Fast mode: Generated ${generatedCount} blocks`);
 
+      // 🔧 FIX: 精确修改模式完成后，清空 preservedBlocksRef 避免污染下次生成
+      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+        console.log('[Precise Mode] Clearing preservedBlocksRef after merge');
+        preservedBlocksRef.current = null;
+      }
+
     } catch (error) {
       console.error(`[Variant ${variantIndex}] Failed:`, error);
       updateVariant(variantId, { status: 'error', error: error.message, generatedAt: Date.now() });
@@ -1186,6 +1192,12 @@ function App() {
       });
 
       console.log(`[Smart] Generated ${finalBlocks.length} blocks (${newBlocks.length} new + ${preservedBlocksRef.current?.length || 0} preserved)`);
+
+      // 🔧 FIX: 精确修改模式完成后，清空 preservedBlocksRef 避免污染下次生成
+      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+        console.log('[Precise Mode - Smart] Clearing preservedBlocksRef after merge');
+        preservedBlocksRef.current = null;
+      }
     } catch (error) {
       console.error('[Smart] Generation error:', error);
       updateVariant(variantId, {
@@ -1504,10 +1516,16 @@ ${userMessage}
       
       // 等待所有请求完成（或失败）
       await Promise.allSettled(promises);
-      
+
+      // 🔧 FIX: 并发生成完成后，清空 preservedBlocksRef 避免下次生成时误用
+      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
+        console.log('[Concurrent Generation] Clearing preservedBlocksRef after all variants completed');
+        preservedBlocksRef.current = null;
+      }
+
       // 完成并发生成（同时清理之前消息的 variants）
       finalizeConcurrentGeneration();
-      
+
       // Agent 模式完成后折叠工作流程
       if (isAgentMode) {
         setIsWorkflowCollapsed(true);
