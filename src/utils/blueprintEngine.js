@@ -8,7 +8,7 @@
  * 4. 执行建造
  */
 
-import { callLLM } from './ai.js';
+import { fetchAIResponse } from './ai.js';
 import {
   generateFullBlueprint,
   validateBlueprint,
@@ -108,13 +108,17 @@ export async function generateBlueprintWithAI(requirements, settings) {
 请返回标准 JSON 格式的蓝图。`;
 
   try {
-    const response = await callLLM(
-      [{ role: 'user', content: prompt }],
-      settings,
-      {
-        temperature: 0.7,
-        response_format: { type: 'json_object' }
-      }
+    const response = await fetchAIResponse(
+      prompt,
+      settings.apiKey,
+      settings.baseUrl || 'https://api.openai.com/v1',
+      settings.model || 'gpt-4',
+      [], // history
+      null, // onChunk
+      null, // currentCode
+      null, // imageUrl
+      null, // apiHistory
+      settings // settings
     );
 
     let blueprint;
@@ -192,10 +196,17 @@ ${requirements.specialFeatures?.join('、') || '无'}
   }
 
   try {
-    const response = await callLLM(
-      [{ role: 'user', content: prompt }],
-      settings,
-      { temperature: 0.7 }
+    const response = await fetchAIResponse(
+      prompt,
+      settings.apiKey,
+      settings.baseUrl || 'https://api.openai.com/v1',
+      settings.model || 'gpt-4',
+      [], // history
+      null, // onChunk
+      null, // currentCode
+      null, // imageUrl
+      null, // apiHistory
+      settings // settings
     );
 
     if (onProgress) {
