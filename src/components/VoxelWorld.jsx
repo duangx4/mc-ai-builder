@@ -1521,7 +1521,7 @@ export default function VoxelWorld({ version = '1.20.1' }) {
             y / selectedBlocks.length + 0.5,
             z / selectedBlocks.length + 0.5
         ];
-    }, [selectedBlockIds, blocks]);
+    }, [selectedBlockIds, blocks.length]); // 只依赖 blocks.length，避免因数组引用变化导致无限循环
 
     // Use a state to force re-render when selection changes (to fix the ref delay)
     const [, forceUpdate] = useState({});
