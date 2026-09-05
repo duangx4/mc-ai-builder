@@ -709,11 +709,8 @@ function App() {
 
       console.log(`[Variant ${variantIndex}] Fast mode: Generated ${generatedCount} blocks`);
 
-      // 🔧 FIX: 精确修改模式完成后，清空 preservedBlocksRef 避免污染下次生成
-      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
-        console.log('[Precise Mode] Clearing preservedBlocksRef after merge');
-        preservedBlocksRef.current = null;
-      }
+      // ⚠️ 注意：不在这里清理 preservedBlocksRef，因为并发生成时多个变体需要共享
+      // 改为在并发生成完成后统一清理（见 Promise.allSettled 之后）
 
     } catch (error) {
       console.error(`[Variant ${variantIndex}] Failed:`, error);
@@ -1193,11 +1190,8 @@ function App() {
 
       console.log(`[Smart] Generated ${finalBlocks.length} blocks (${newBlocks.length} new + ${preservedBlocksRef.current?.length || 0} preserved)`);
 
-      // 🔧 FIX: 精确修改模式完成后，清空 preservedBlocksRef 避免污染下次生成
-      if (preservedBlocksRef.current && preservedBlocksRef.current.length > 0) {
-        console.log('[Precise Mode - Smart] Clearing preservedBlocksRef after merge');
-        preservedBlocksRef.current = null;
-      }
+      // ⚠️ 注意：不在这里清理 preservedBlocksRef，因为并发生成时多个变体需要共享
+      // 改为在并发生成完成后统一清理（见 Promise.allSettled 之后）
     } catch (error) {
       console.error('[Smart] Generation error:', error);
       updateVariant(variantId, {
