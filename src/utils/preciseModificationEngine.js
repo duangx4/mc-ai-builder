@@ -9,6 +9,13 @@
  */
 
 import { fetchAIResponse } from './ai.js';
+import {
+  extractAIContent,
+  extractJSON,
+  formatAIError,
+  validateAPISettings,
+  createUserFriendlyError
+} from './errorHandling.js';
 
 /**
  * 阶段1：分析选中区域和周边环境
@@ -18,6 +25,9 @@ import { fetchAIResponse } from './ai.js';
  * @returns {Promise<Object>} - 分析结果
  */
 export async function analyzeRegionAndContext(regionBlocks, surroundingBlocks, bounds, settings) {
+  // 验证 API 设置
+  validateAPISettings(settings);
+
   const prompt = `你是 Minecraft 建筑分析专家。分析选中区域和周边环境。
 
 **选中区域**：
@@ -58,13 +68,13 @@ ${surroundingBlocks.length > 0 ? `- 周边主要材料:\n${analyzeMaterials(surr
       []
     );
 
-    const response = result.content || result;
+    const response = extractAIContent(result);
 
     // 尝试解析 JSON
     try {
-      return JSON.parse(response);
+      return extractJSON(response);
     } catch (parseError) {
-      console.warn('分析结果 JSON 解析失败，使用默认分析');
+      console.warn('分析结果 JSON 解析失败，使用默认分析:', parseError.message);
       return {
         buildingType: '未知建筑',
         detectedStyle: '混合风格',
@@ -75,8 +85,9 @@ ${surroundingBlocks.length > 0 ? `- 周边主要材料:\n${analyzeMaterials(surr
       };
     }
   } catch (error) {
-    console.error('区域分析失败:', error);
-    throw error;
+    const friendlyError = createUserFriendlyError('analyze', error);
+    console.error('区域分析失败:', friendlyError);
+    throw new Error(friendlyError);
   }
 }
 
@@ -88,6 +99,8 @@ ${surroundingBlocks.length > 0 ? `- 周边主要材料:\n${analyzeMaterials(surr
  * @returns {Promise<Object>} - 修改计划
  */
 export async function planModification(analysis, userRequest, bounds, settings) {
+  validateAPISettings(settings);
+
   const prompt = `基于分析结果，规划建筑修改方案。
 
 **当前建筑分析**：
@@ -137,12 +150,12 @@ ${userRequest}
       []
     );
 
-    const response = result.content || result;
+    const response = extractAIContent(result);
 
     try {
-      return JSON.parse(response);
+      return extractJSON(response);
     } catch (parseError) {
-      console.warn('修改计划 JSON 解析失败，使用简化计划');
+      console.warn('修改计划 JSON 解析失败，使用简化计划:', parseError.message);
       return {
         summary: '根据需求修改选中区域',
         steps: [
@@ -155,8 +168,9 @@ ${userRequest}
       };
     }
   } catch (error) {
-    console.error('修改规划失败:', error);
-    throw error;
+    const friendlyError = createUserFriendlyError('plan', error);
+    console.error('修改规划失败:', friendlyError);
+    throw new Error(friendlyError);
   }
 }
 
@@ -169,6 +183,8 @@ ${userRequest}
  * @returns {Promise<string>} - VoxelBuilder 代码
  */
 export async function generateModificationCode(plan, analysis, preservedBlocks, bounds, settings) {
+  validateAPISettings(settings);
+
   const prompt = `生成精确的 VoxelBuilder 修改代码。
 
 **修改计划**：
@@ -210,21 +226,20 @@ ${plan.boundaryHandling}
       []
     );
 
-    const response = result.content || result;
+    const response = extractAIContent(result);
 
     // 提取代码块
-    let code = response;
-    if (typeof response === 'string') {
-      const codeMatch = response.match(/```(?:javascript|js)?\n([\s\S]+?)\n```/);
-      if (codeMatch) {
-        code = codeMatch[1];
-      }
+    const code = extractCodeBlock(response);
+
+    if (!code || code.length < 10) {
+      throw new Error('生成的代码为空或过短');
     }
 
     return code;
   } catch (error) {
-    console.error('代码生成失败:', error);
-    throw error;
+    const friendlyError = createUserFriendlyError('generate', error);
+    console.error('代码生成失败:', friendlyError);
+    throw new Error(friendlyError);
   }
 }
 

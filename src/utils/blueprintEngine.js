@@ -16,6 +16,13 @@ import {
   generateConstructionPlan,
   estimateMaterialList
 } from './blueprintGenerator.js';
+import {
+  extractAIContent,
+  extractJSON,
+  extractCodeBlock,
+  validateAPISettings,
+  createUserFriendlyError
+} from './errorHandling.js';
 
 // 5 个核心问题
 export const CORE_QUESTIONS = [
@@ -108,6 +115,8 @@ export async function generateBlueprintWithAI(requirements, settings) {
 请返回标准 JSON 格式的蓝图。`;
 
   try {
+    validateAPISettings(settings);
+
     const result = await fetchAIResponse(
       prompt,
       settings.apiKey,
@@ -121,13 +130,13 @@ export async function generateBlueprintWithAI(requirements, settings) {
       settings // settings
     );
 
-    const response = result.content || result; // 兼容不同返回格式
+    const response = extractAIContent(result);
 
     let blueprint;
     try {
-      blueprint = JSON.parse(response);
+      blueprint = extractJSON(response);
     } catch (parseError) {
-      console.error('AI 返回的蓝图 JSON 解析失败:', parseError);
+      console.warn('AI 返回的蓝图 JSON 解析失败，使用本地生成器:', parseError.message);
       // 降级：使用本地生成器
       blueprint = generateFullBlueprint(requirements);
     }
@@ -198,6 +207,8 @@ ${requirements.specialFeatures?.join('、') || '无'}
   }
 
   try {
+    validateAPISettings(settings);
+
     const result = await fetchAIResponse(
       prompt,
       settings.apiKey,
@@ -211,19 +222,17 @@ ${requirements.specialFeatures?.join('、') || '无'}
       settings // settings
     );
 
-    const response = result.content || result; // 兼容不同返回格式
+    const response = extractAIContent(result);
 
     if (onProgress) {
       onProgress({ phase: 'build', message: '建造代码生成完成', progress: 100 });
     }
 
-    // 提取代码（如果 AI 返回了代码块）
-    let code = response;
-    if (typeof response === 'string') {
-      const codeMatch = response.match(/```(?:javascript|js)?\n([\s\S]+?)\n```/);
-      if (codeMatch) {
-        code = codeMatch[1];
-      }
+    // 提取代码块
+    const code = extractCodeBlock(response);
+
+    if (!code || code.length < 10) {
+      throw new Error('生成的建造代码为空或过短');
     }
 
     return {
@@ -232,7 +241,9 @@ ${requirements.specialFeatures?.join('、') || '无'}
     };
 
   } catch (error) {
-    console.error('建造代码生成失败:', error);
+    const friendlyError = createUserFriendlyError('build', error);
+    console.error('建造代码生成失败:', friendlyError);
+    throw new Error(friendlyError);
     throw new Error(`建造代码生成失败: ${error.message}`);
   }
 }
